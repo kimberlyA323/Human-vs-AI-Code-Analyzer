@@ -21,10 +21,15 @@ class User(db.Model):
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "development-key")
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    database_url = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:password@localhost:5432/code_analyzer",
+        "postgresql+psycopg://postgres:password@localhost:5432/code_analyzer",
     )
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace(
+            "postgresql://", "postgresql+psycopg://", 1
+        )
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     if test_config:
