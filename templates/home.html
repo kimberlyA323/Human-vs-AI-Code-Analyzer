@@ -2,8 +2,27 @@
 {% block title %}Home{% endblock %}
 {% block content %}
 <section class="welcome-card">
-    <h1>Welcome to the Code Analyzer</h1>
-    <p>Start by entering the Python code written by a person.</p>
+    <h1>Welcome, {{ session.get('username') }}</h1>
+    <p>Compare two Python solutions for correctness, speed, and complexity.</p>
     <a class="primary-link" href="{{ url_for('compare') }}">Start a Comparison</a>
+</section>
+
+<section class="dashboard-section">
+    <div class="page-heading">
+        <h2>Recent Comparisons</h2>
+        <a href="{{ url_for('history') }}">View all history</a>
+    </div>
+    {% if recent_comparisons %}
+        <div class="history-list">
+            {% for comparison in recent_comparisons %}
+                <a class="history-item" href="{{ url_for('history_detail', comparison_id=comparison.id) }}">
+                    <strong>{{ comparison.problem_name }}</strong>
+                    <time>{{ comparison.created_at.strftime('%b %d, %Y') }}</time>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">Your recent comparisons will appear here.</p>
+    {% endif %}
 </section>
 {% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Error{% endblock %}
+{% block content %}
+<section class="welcome-card error-page">
+    {% if error_code == 413 %}
+        <h1>Submission Too Large</h1>
+        <p>The submitted code is larger than this project allows.</p>
+    {% else %}
+        <h1>Page Not Found</h1>
+        <p>The page does not exist or you do not have permission to view it.</p>
+    {% endif %}
+    <a class="primary-link" href="{{ url_for('home') }}">Return Home</a>
+</section>
+{% endblock %}

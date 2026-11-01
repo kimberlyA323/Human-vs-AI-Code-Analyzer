@@ -48,6 +48,9 @@ def create_app(test_config=None):
         )
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["MAX_CONTENT_LENGTH"] = 100_000
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     if test_config:
         app.config.update(test_config)
@@ -60,7 +63,15 @@ def create_app(test_config=None):
     @app.route("/")
     def home():
         if "user_id" in session:
-            return render_template("home.html")
+            recent_comparisons = db.session.scalars(
+                select(Comparison)
+                .where(Comparison.user_id == session["user_id"])
+                .order_by(Comparison.created_at.desc())
+                .limit(3)
+            ).all()
+            return render_template(
+                "home.html", recent_comparisons=recent_comparisons
+            )
         return redirect(url_for("login"))
 
     @app.route("/register", methods=["GET", "POST"])
@@ -198,6 +209,14 @@ def create_app(test_config=None):
             "history_detail.html", comparison=comparison, samples=samples
         )
 
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template("error.html", error_code=404), 404
+
+    @app.errorhandler(413)
+    def request_too_large(error):
+        return render_template("error.html", error_code=413), 413
+
     return app
 
 
@@ -249,8 +268,12 @@ def validate_registration(username, email, password):
         return "All fields are required."
     if len(username) < 3:
         return "Username must be at least 3 characters."
+    if len(username) > 50:
+        return "Username must be 50 characters or fewer."
     if "@" not in email or "." not in email.split("@")[-1]:
         return "Enter a valid email address."
+    if len(email) > 120:
+        return "Email must be 120 characters or fewer."
     if len(password) < 8:
         return "Password must be at least 8 characters."
     return None

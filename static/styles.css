@@ -121,6 +121,19 @@ button:hover {
     padding: 32px;
 }
 
+.dashboard-section {
+    background: white;
+    border-radius: 8px;
+    margin-top: 24px;
+    padding: 32px;
+}
+
+.error-page {
+    margin: 60px auto;
+    max-width: 600px;
+    text-align: center;
+}
+
 .form-card {
     background: white;
     border-radius: 8px;
@@ -272,5 +285,10 @@ pre {
         align-items: flex-start;
         flex-direction: column;
         gap: 12px;
+    }
+
+    nav {
+        align-items: flex-start;
+        flex-wrap: wrap;
     }
 }

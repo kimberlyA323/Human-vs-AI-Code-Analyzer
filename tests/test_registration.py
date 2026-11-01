@@ -105,7 +105,7 @@ def test_user_can_log_in_and_log_out():
         data={"email": "student@example.com", "password": "password123"},
         follow_redirects=True,
     )
-    assert b"Welcome to the Code Analyzer" in login_response.data
+    assert b"Welcome, student1" in login_response.data
 
     logout_response = client.post("/logout", follow_redirects=True)
     assert b"You have been logged out" in logout_response.data
@@ -257,3 +257,33 @@ def test_user_cannot_view_another_users_comparison():
     )
 
     assert second_client.get("/history/1").status_code == 404
+
+
+def test_home_page_shows_recent_comparison():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+    client.post(
+        "/compare",
+        data={
+            "problem_name": "Recent problem",
+            "human_code": "print(2)",
+            "ai_code": "print(2)",
+            "expected_output": "2",
+        },
+    )
+
+    response = client.get("/")
+
+    assert b"Recent Comparisons" in response.data
+    assert b"Recent problem" in response.data
+
+
+def test_unknown_page_uses_helpful_error_page():
+    app = make_test_app()
+    client = app.test_client()
+
+    response = client.get("/not-a-real-page")
+
+    assert response.status_code == 404
+    assert b"Page Not Found" in response.data
