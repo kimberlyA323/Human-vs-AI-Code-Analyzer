@@ -34,6 +34,10 @@
                         <dt>Execution time</dt>
                         <dd>{{ '%.3f'|format(result.execution_time * 1000) }} ms</dd>
                     </div>
+                    <div>
+                        <dt>Complexity</dt>
+                        <dd>{{ result.complexity_score }}</dd>
+                    </div>
                 </dl>
                 <h3>Output</h3>
                 <pre>{{ result.output or 'No output' }}</pre>

@@ -1,4 +1,6 @@
-from analyzer import analyze_code
+import ast
+
+from analyzer import analyze_code, calculate_complexity
 
 
 def test_valid_code_runs():
@@ -28,3 +30,25 @@ def test_wrong_output_is_counted_as_failed():
 
     assert result["tests_passed"] == 0
     assert result["tests_failed"] == 1
+
+
+def test_complexity_counts_decisions():
+    syntax_tree = ast.parse(
+        """
+def choose(value):
+    if value > 10:
+        return 'large'
+    for number in range(value):
+        if number == 3:
+            return 'three'
+    return 'small'
+"""
+    )
+
+    assert calculate_complexity(syntax_tree) == 4
+
+
+def test_analysis_includes_complexity():
+    result = analyze_code("if True:\n    print('yes')")
+
+    assert result["complexity_score"] == 2

@@ -175,3 +175,4 @@ def test_user_can_run_a_code_comparison():
     assert response.data.count(b"Hello Kim") >= 2
     assert response.data.count(b"Tests passed") == 2
     assert response.data.count(b"Execution time") == 2
+    assert response.data.count(b"Complexity") == 2
