@@ -157,3 +157,56 @@ textarea {
     color: #59636e;
     font-size: 14px;
 }
+
+.page-heading {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.result-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 24px;
+}
+
+.result-card {
+    border: 1px solid #d8dde3;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+pre {
+    background: #f4f5f7;
+    border-radius: 4px;
+    overflow-x: auto;
+    padding: 12px;
+    white-space: pre-wrap;
+}
+
+.status {
+    font-weight: bold;
+}
+
+.passed {
+    color: #17652d;
+}
+
+.failed,
+.error-output {
+    color: #8a1c1c;
+}
+
+@media (max-width: 700px) {
+    .result-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .site-header,
+    .page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+}
