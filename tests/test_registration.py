@@ -152,3 +152,24 @@ def test_logged_in_user_sees_ai_code_field():
 
     assert b"AI-generated Python code" in response.data
     assert b"Compare Code" in response.data
+
+
+def test_user_can_run_a_code_comparison():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+
+    response = client.post(
+        "/compare",
+        data={
+            "problem_name": "Greeting",
+            "human_code": "name = input()\nprint('Hello', name)",
+            "ai_code": "value = input()\nprint(f'Hello {value}')",
+            "test_input": "Kim\n",
+            "expected_output": "Hello Kim",
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"Comparison Results" in response.data
+    assert response.data.count(b"Hello Kim") >= 2

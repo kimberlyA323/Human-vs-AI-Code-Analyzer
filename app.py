@@ -15,6 +15,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from analyzer import analyze_code
+
 
 load_dotenv()
 db = SQLAlchemy()
@@ -131,9 +133,37 @@ def create_app(test_config=None):
         flash("You have been logged out.", "success")
         return redirect(url_for("login"))
 
-    @app.route("/compare")
+    @app.route("/compare", methods=["GET", "POST"])
     @login_required
     def compare():
+        if request.method == "POST":
+            problem_name = request.form.get("problem_name", "").strip()
+            human_code = request.form.get("human_code", "")
+            ai_code = request.form.get("ai_code", "")
+            test_input = request.form.get("test_input", "")
+            expected_output = request.form.get("expected_output", "").strip()
+
+            if not problem_name or not human_code.strip() or not ai_code.strip():
+                flash("Problem name and both code samples are required.", "error")
+                return render_template(
+                    "compare.html",
+                    problem_name=problem_name,
+                    human_code=human_code,
+                    ai_code=ai_code,
+                    test_input=test_input,
+                    expected_output=expected_output,
+                )
+
+            human_result = analyze_code(human_code, test_input)
+            ai_result = analyze_code(ai_code, test_input)
+            return render_template(
+                "results.html",
+                problem_name=problem_name,
+                expected_output=expected_output,
+                human_result=human_result,
+                ai_result=ai_result,
+            )
+
         return render_template("compare.html")
 
     return app

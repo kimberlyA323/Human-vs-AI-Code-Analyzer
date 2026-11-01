@@ -7,7 +7,7 @@
 
     <form method="post">
         <label for="problem_name">Problem name</label>
-        <input id="problem_name" name="problem_name" type="text" placeholder="Example: Add two numbers" required>
+        <input id="problem_name" name="problem_name" type="text" value="{{ problem_name or '' }}" placeholder="Example: Add two numbers" required>
 
         <label for="human_code">Human-written Python code</label>
         <textarea id="human_code" name="human_code" rows="15" spellcheck="false" required>{{ human_code or '' }}</textarea>
@@ -15,8 +15,14 @@
         <label for="ai_code">AI-generated Python code</label>
         <textarea id="ai_code" name="ai_code" rows="15" spellcheck="false" required>{{ ai_code or '' }}</textarea>
 
-        <button type="submit" disabled>Compare Code</button>
-        <p class="help-text">Code analysis will be enabled in the next user story.</p>
+        <label for="test_input">Test input</label>
+        <textarea id="test_input" name="test_input" rows="4" placeholder="Input sent to both programs">{{ test_input or '' }}</textarea>
+
+        <label for="expected_output">Expected output</label>
+        <textarea id="expected_output" name="expected_output" rows="4" placeholder="The correct output for the test">{{ expected_output or '' }}</textarea>
+
+        <button type="submit">Compare Code</button>
+        <p class="help-text">Only run code that you trust. Programs stop after three seconds.</p>
     </form>
 </section>
 {% endblock %}
