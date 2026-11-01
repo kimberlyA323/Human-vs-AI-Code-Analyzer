@@ -19,10 +19,12 @@ def analyze_code(source_code, test_input="", expected_output=""):
         return make_result(False, error="Code is too long to analyze.", tests_failed=1)
 
     try:
-        ast.parse(source_code)
+        syntax_tree = ast.parse(source_code)
     except SyntaxError as error:
         message = f"Syntax error on line {error.lineno}: {error.msg}"
         return make_result(False, error=message, tests_failed=1)
+
+    complexity_score = calculate_complexity(syntax_tree)
 
     # Each program runs in a temporary folder that is removed afterward.
     with tempfile.TemporaryDirectory() as temporary_directory:
@@ -47,6 +49,7 @@ def analyze_code(source_code, test_input="", expected_output=""):
                 error="The program exceeded the 3-second limit.",
                 tests_failed=1,
                 execution_time=RUN_TIMEOUT_SECONDS,
+                complexity_score=complexity_score,
             )
 
     if completed.returncode != 0:
@@ -57,6 +60,7 @@ def analyze_code(source_code, test_input="", expected_output=""):
             error=error_text,
             tests_failed=1,
             execution_time=execution_time,
+            complexity_score=complexity_score,
         )
 
     output = completed.stdout.strip()
@@ -68,6 +72,7 @@ def analyze_code(source_code, test_input="", expected_output=""):
             tests_passed=1 if passed else 0,
             tests_failed=0 if passed else 1,
             execution_time=execution_time,
+            complexity_score=complexity_score,
         )
 
     # A program that runs without an expected answer counts as one passed run.
@@ -76,7 +81,28 @@ def analyze_code(source_code, test_input="", expected_output=""):
         output=output,
         tests_passed=1,
         execution_time=execution_time,
+        complexity_score=complexity_score,
     )
+
+
+def calculate_complexity(syntax_tree):
+    """Estimate cyclomatic complexity by counting decision points."""
+
+    score = 1
+    decision_nodes = (ast.If, ast.For, ast.While, ast.AsyncFor, ast.IfExp)
+
+    for node in ast.walk(syntax_tree):
+        if isinstance(node, decision_nodes):
+            score += 1
+        elif isinstance(node, ast.BoolOp):
+            # A statement such as "a and b and c" adds two decisions.
+            score += max(1, len(node.values) - 1)
+        elif isinstance(node, ast.Try):
+            score += len(node.handlers)
+        elif isinstance(node, ast.comprehension):
+            score += 1 + len(node.ifs)
+
+    return score
 
 
 def make_result(
@@ -86,6 +112,7 @@ def make_result(
     tests_passed=0,
     tests_failed=0,
     execution_time=0.0,
+    complexity_score=0,
 ):
     return {
         "success": success,
@@ -94,4 +121,5 @@ def make_result(
         "tests_passed": tests_passed,
         "tests_failed": tests_failed,
         "execution_time": execution_time,
+        "complexity_score": complexity_score,
     }
