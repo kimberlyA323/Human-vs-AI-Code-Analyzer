@@ -171,7 +171,6 @@ def test_logged_in_user_sees_ai_code_field():
 
     assert b"AI-generated Python code" in response.data
     assert b"Run Comparison" in response.data
-    assert b"does not detect whether code was written by AI" in response.data
 
 
 def test_user_can_run_a_code_comparison():

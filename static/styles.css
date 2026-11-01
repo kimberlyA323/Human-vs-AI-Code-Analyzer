@@ -229,15 +229,6 @@ textarea {
     margin-top: 8px;
 }
 
-.authorship-note {
-    background: #fff8df;
-    border: 1px solid #ead689;
-    border-radius: 6px;
-    line-height: 1.5;
-    margin-top: 20px;
-    padding: 14px 16px;
-}
-
 .compare-form {
     gap: 22px;
 }
