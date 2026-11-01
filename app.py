@@ -11,22 +11,14 @@ from flask import (
     session,
     url_for,
 )
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from analyzer import analyze_code
+from models import AnalysisResult, CodeSample, Comparison, User, db
 
 
 load_dotenv()
-db = SQLAlchemy()
-
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
 
 
 def login_required(view):
@@ -156,8 +148,19 @@ def create_app(test_config=None):
 
             human_result = analyze_code(human_code, test_input, expected_output)
             ai_result = analyze_code(ai_code, test_input, expected_output)
+            comparison = save_comparison(
+                user_id=session["user_id"],
+                problem_name=problem_name,
+                test_input=test_input,
+                expected_output=expected_output,
+                human_code=human_code,
+                ai_code=ai_code,
+                human_result=human_result,
+                ai_result=ai_result,
+            )
             return render_template(
                 "results.html",
+                comparison_id=comparison.id,
                 problem_name=problem_name,
                 expected_output=expected_output,
                 human_result=human_result,
@@ -167,6 +170,49 @@ def create_app(test_config=None):
         return render_template("compare.html")
 
     return app
+
+
+def save_comparison(
+    user_id,
+    problem_name,
+    test_input,
+    expected_output,
+    human_code,
+    ai_code,
+    human_result,
+    ai_result,
+):
+    """Save one comparison and its two code samples as a single database unit."""
+
+    comparison = Comparison(
+        user_id=user_id,
+        problem_name=problem_name,
+        test_input=test_input,
+        expected_output=expected_output,
+    )
+    comparison.code_samples.extend(
+        [
+            make_code_sample("Human", human_code, human_result),
+            make_code_sample("AI", ai_code, ai_result),
+        ]
+    )
+    db.session.add(comparison)
+    db.session.commit()
+    return comparison
+
+
+def make_code_sample(code_type, source_code, result):
+    sample = CodeSample(code_type=code_type, source_code=source_code)
+    sample.analysis_result = AnalysisResult(
+        tests_passed=result["tests_passed"],
+        tests_failed=result["tests_failed"],
+        execution_time=result["execution_time"],
+        complexity_score=result["complexity_score"],
+        error_count=1 if result["error"] else 0,
+        output=result["output"],
+        error_message=result["error"],
+    )
+    return sample
 
 
 def validate_registration(username, email, password):

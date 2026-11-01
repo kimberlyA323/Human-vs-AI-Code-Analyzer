@@ -6,6 +6,9 @@
         <div>
             <h1>Comparison Results</h1>
             <p>{{ problem_name }}</p>
+            {% if comparison_id %}
+                <p class="saved-label">Saved as comparison #{{ comparison_id }}</p>
+            {% endif %}
         </div>
         <a class="primary-link" href="{{ url_for('compare') }}">New Comparison</a>
     </div>
