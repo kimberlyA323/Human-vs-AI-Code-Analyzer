@@ -170,7 +170,8 @@ def test_logged_in_user_sees_ai_code_field():
     response = client.get("/compare")
 
     assert b"AI-generated Python code" in response.data
-    assert b"Compare Code" in response.data
+    assert b"Run Comparison" in response.data
+    assert b"does not detect whether code was written by AI" in response.data
 
 
 def test_user_can_run_a_code_comparison():
@@ -195,7 +196,7 @@ def test_user_can_run_a_code_comparison():
     assert response.data.count(b"Tests passed") == 2
     assert response.data.count(b"Execution time") >= 2
     assert response.data.count(b"Complexity") == 2
-    assert b"Both solutions passed the test" in response.data
+    assert b"better" in response.data or b"equally correct" in response.data
 
 
 def test_comparison_is_saved_with_two_results():

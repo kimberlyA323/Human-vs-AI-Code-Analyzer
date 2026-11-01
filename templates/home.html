@@ -3,7 +3,8 @@
 {% block content %}
 <section class="welcome-card">
     <h1>Welcome, {{ session.get('username') }}</h1>
-    <p>Compare two Python solutions for correctness, speed, and complexity.</p>
+    <p>Compare code you label as human-written and AI-generated for correctness, speed, and complexity.</p>
+    <p class="help-text">This application compares code performance; it does not detect who wrote the code.</p>
     <a class="primary-link" href="{{ url_for('compare') }}">Start a Comparison</a>
 </section>
 

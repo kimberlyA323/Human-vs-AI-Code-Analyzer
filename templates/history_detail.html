@@ -10,8 +10,9 @@
         <a href="{{ url_for('history') }}">Back to History</a>
     </div>
 
-    <section class="result-summary">
-        <h2>{{ summary.headline }}</h2>
+    <section class="result-summary verdict-{{ summary.verdict_class }}">
+        <span class="step-label">Overall verdict</span>
+        <h2>{{ summary.verdict }}</h2>
         <ul>
             {% for detail in summary.details %}
                 <li>{{ detail }}</li>

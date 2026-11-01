@@ -17,8 +17,9 @@
         <p><strong>Expected output:</strong> <code>{{ expected_output }}</code></p>
     {% endif %}
 
-    <section class="result-summary">
-        <h2>{{ summary.headline }}</h2>
+    <section class="result-summary verdict-{{ summary.verdict_class }}">
+        <span class="step-label">Overall verdict</span>
+        <h2>{{ summary.verdict }}</h2>
         <ul>
             {% for detail in summary.details %}
                 <li>{{ detail }}</li>
@@ -27,12 +28,23 @@
         <p class="help-text">Execution time can change slightly between runs.</p>
     </section>
 
+    <div class="decision-rule">
+        <strong>How the verdict is decided:</strong>
+        Correctness comes first, then lower complexity, then execution time.
+    </div>
+
     <div class="result-grid">
         {% for label, result in [('Human-written code', human_result), ('AI-generated code', ai_result)] %}
             <article class="result-card">
                 <h2>{{ label }}</h2>
                 <p class="status {{ 'passed' if result.success else 'failed' }}">
-                    {{ 'Program ran successfully' if result.success else 'Program error' }}
+                    {% if result.tests_passed %}
+                        Passed: output matched the expected answer
+                    {% elif result.success %}
+                        Failed: output did not match the expected answer
+                    {% else %}
+                        Failed: program could not run
+                    {% endif %}
                 </p>
                 <dl class="metric-list">
                     <div>

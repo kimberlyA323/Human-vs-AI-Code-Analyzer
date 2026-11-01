@@ -2,27 +2,66 @@
 {% block title %}New Comparison{% endblock %}
 {% block content %}
 <section class="form-card wide-card">
-    <h1>New Code Comparison</h1>
-    <p>Enter two Python programs that solve the same problem.</p>
+    <div class="compare-intro">
+        <span class="step-label">New analysis</span>
+        <h1>Compare Two Python Solutions</h1>
+        <p>Run the same test against both programs to compare correctness, speed, and complexity.</p>
+    </div>
 
-    <form method="post">
-        <label for="problem_name">Problem name</label>
-        <input id="problem_name" name="problem_name" type="text" value="{{ problem_name or '' }}" placeholder="Example: Add two numbers" required>
+    <aside class="authorship-note">
+        <strong>This application does not detect whether code was written by AI.</strong>
+        You choose which sample is human-written and which sample is AI-generated.
+    </aside>
 
-        <label for="human_code">Human-written Python code</label>
-        <textarea id="human_code" name="human_code" rows="15" spellcheck="false" required>{{ human_code or '' }}</textarea>
+    <form class="compare-form" method="post">
+        <fieldset class="form-section">
+            <legend><span>1</span> Describe the problem</legend>
+            <p class="section-help">Give the comparison a short name so you can find it in your history.</p>
+            <label for="problem_name">Problem name</label>
+            <input id="problem_name" name="problem_name" type="text" value="{{ problem_name or '' }}" placeholder="Example: Classify a number" required>
+        </fieldset>
 
-        <label for="ai_code">AI-generated Python code</label>
-        <textarea id="ai_code" name="ai_code" rows="15" spellcheck="false" required>{{ ai_code or '' }}</textarea>
+        <fieldset class="form-section">
+            <legend><span>2</span> Enter both solutions</legend>
+            <p class="section-help">Both programs should use <code>input()</code> and <code>print()</code>.</p>
+            <div class="code-entry-grid">
+                <div class="code-entry human-entry">
+                    <label for="human_code"><span class="sample-badge human-badge">Human</span> Human-written Python code</label>
+                    <textarea id="human_code" name="human_code" rows="16" spellcheck="false" placeholder="number = int(input())&#10;print(number * 2)" required>{{ human_code or '' }}</textarea>
+                </div>
 
-        <label for="test_input">Test input</label>
-        <textarea id="test_input" name="test_input" rows="4" placeholder="Input sent to both programs">{{ test_input or '' }}</textarea>
+                <div class="code-entry ai-entry">
+                    <label for="ai_code"><span class="sample-badge ai-badge">AI</span> AI-generated Python code</label>
+                    <textarea id="ai_code" name="ai_code" rows="16" spellcheck="false" placeholder="value = int(input())&#10;answer = value * 2&#10;print(answer)" required>{{ ai_code or '' }}</textarea>
+                </div>
+            </div>
+        </fieldset>
 
-        <label for="expected_output">Expected output</label>
-        <textarea id="expected_output" name="expected_output" rows="4" placeholder="The correct output for the test">{{ expected_output or '' }}</textarea>
+        <fieldset class="form-section">
+            <legend><span>3</span> Define the test</legend>
+            <p class="section-help">The same input is sent to both programs. Their printed output is checked against the expected answer.</p>
+            <div class="test-grid">
+                <div>
+                    <label for="test_input">Test input</label>
+                    <textarea id="test_input" name="test_input" rows="5" placeholder="Example: 7">{{ test_input or '' }}</textarea>
+                    <small>What a user would type when the program calls <code>input()</code>.</small>
+                </div>
 
-        <button type="submit">Compare Code</button>
-        <p class="help-text">Only run code that you trust. Programs stop after three seconds.</p>
+                <div>
+                    <label for="expected_output">Expected output</label>
+                    <textarea id="expected_output" name="expected_output" rows="5" placeholder="Example: 14">{{ expected_output or '' }}</textarea>
+                    <small>The exact correct answer the programs should print.</small>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="submit-row">
+            <div>
+                <strong>Ready to compare?</strong>
+                <p class="help-text">Only run code that you trust. Programs stop after three seconds.</p>
+            </div>
+            <button class="compare-button" type="submit">Run Comparison</button>
+        </div>
     </form>
 </section>
 {% endblock %}

@@ -70,5 +70,5 @@ def test_comparison_summary_explains_the_outcome():
 
     summary = compare_results(human_result, ai_result)
 
-    assert "Human-written code" in summary["headline"]
+    assert "Human-written code was better" in summary["verdict"]
     assert any("AI-generated code ran" in line for line in summary["details"])

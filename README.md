@@ -4,6 +4,9 @@ A Flask web application that compares human-written and AI-generated Python
 programs. Both programs receive the same input, and the application compares
 their output, execution time, errors, and cyclomatic complexity.
 
+The application does not detect whether code was written by AI. The user labels
+the two samples before comparing them.
+
 ## Features
 
 - Account registration with hashed passwords
