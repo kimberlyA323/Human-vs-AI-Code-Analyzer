@@ -17,6 +17,16 @@
         <p><strong>Expected output:</strong> <code>{{ expected_output }}</code></p>
     {% endif %}
 
+    <section class="result-summary">
+        <h2>{{ summary.headline }}</h2>
+        <ul>
+            {% for detail in summary.details %}
+                <li>{{ detail }}</li>
+            {% endfor %}
+        </ul>
+        <p class="help-text">Execution time can change slightly between runs.</p>
+    </section>
+
     <div class="result-grid">
         {% for label, result in [('Human-written code', human_result), ('AI-generated code', ai_result)] %}
             <article class="result-card">

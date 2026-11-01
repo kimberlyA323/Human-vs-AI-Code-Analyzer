@@ -193,8 +193,9 @@ def test_user_can_run_a_code_comparison():
     assert b"Comparison Results" in response.data
     assert response.data.count(b"Hello Kim") >= 2
     assert response.data.count(b"Tests passed") == 2
-    assert response.data.count(b"Execution time") == 2
+    assert response.data.count(b"Execution time") >= 2
     assert response.data.count(b"Complexity") == 2
+    assert b"Both solutions passed the test" in response.data
 
 
 def test_comparison_is_saved_with_two_results():

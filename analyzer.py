@@ -105,6 +105,54 @@ def calculate_complexity(syntax_tree):
     return score
 
 
+def compare_results(human_result, ai_result):
+    """Turn the two sets of measurements into a plain-language summary."""
+
+    human_score = (
+        human_result["tests_passed"],
+        -human_result["tests_failed"],
+    )
+    ai_score = (ai_result["tests_passed"], -ai_result["tests_failed"])
+
+    if human_score > ai_score:
+        headline = "Human-written code produced the more correct result"
+    elif ai_score > human_score:
+        headline = "AI-generated code produced the more correct result"
+    elif human_result["tests_passed"] > 0:
+        headline = "Both solutions passed the test"
+    else:
+        headline = "Neither solution passed the test"
+
+    details = []
+    if human_score == ai_score:
+        details.append("Correctness was equal for this test case.")
+
+    human_time = human_result["execution_time"]
+    ai_time = ai_result["execution_time"]
+    difference_ms = abs(human_time - ai_time) * 1000
+    if difference_ms < 1:
+        details.append("Their execution times were nearly the same.")
+    elif human_time < ai_time:
+        details.append(
+            f"Human-written code ran {difference_ms:.3f} ms faster on this run."
+        )
+    else:
+        details.append(
+            f"AI-generated code ran {difference_ms:.3f} ms faster on this run."
+        )
+
+    human_complexity = human_result["complexity_score"]
+    ai_complexity = ai_result["complexity_score"]
+    if human_complexity < ai_complexity:
+        details.append("Human-written code had the lower complexity score.")
+    elif ai_complexity < human_complexity:
+        details.append("AI-generated code had the lower complexity score.")
+    else:
+        details.append("Both programs had the same complexity score.")
+
+    return {"headline": headline, "details": details}
+
+
 def make_result(
     success,
     output="",

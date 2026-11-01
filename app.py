@@ -16,7 +16,7 @@ from flask import (
 from sqlalchemy import select
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from analyzer import analyze_code
+from analyzer import analyze_code, compare_results
 from models import AnalysisResult, CodeSample, Comparison, User, db
 
 
@@ -181,6 +181,7 @@ def create_app(test_config=None):
                 expected_output=expected_output,
                 human_result=human_result,
                 ai_result=ai_result,
+                summary=compare_results(human_result, ai_result),
             )
 
         return render_template("compare.html")
@@ -209,8 +210,13 @@ def create_app(test_config=None):
             abort(404)
 
         samples = {sample.code_type: sample for sample in comparison.code_samples}
+        human_result = model_result_to_dictionary(samples["Human"].analysis_result)
+        ai_result = model_result_to_dictionary(samples["AI"].analysis_result)
         return render_template(
-            "history_detail.html", comparison=comparison, samples=samples
+            "history_detail.html",
+            comparison=comparison,
+            samples=samples,
+            summary=compare_results(human_result, ai_result),
         )
 
     @app.errorhandler(404)
@@ -283,6 +289,17 @@ def make_code_sample(code_type, source_code, result):
         error_message=result["error"],
     )
     return sample
+
+
+def model_result_to_dictionary(result):
+    """Convert a saved database result to the format used by the analyzer."""
+
+    return {
+        "tests_passed": result.tests_passed,
+        "tests_failed": result.tests_failed,
+        "execution_time": result.execution_time,
+        "complexity_score": result.complexity_score,
+    }
 
 
 def validate_registration(username, email, password):
