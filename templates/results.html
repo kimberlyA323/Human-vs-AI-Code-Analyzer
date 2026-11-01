@@ -30,6 +30,10 @@
                         <dt>Tests failed</dt>
                         <dd>{{ result.tests_failed }}</dd>
                     </div>
+                    <div>
+                        <dt>Execution time</dt>
+                        <dd>{{ '%.3f'|format(result.execution_time * 1000) }} ms</dd>
+                    </div>
                 </dl>
                 <h3>Output</h3>
                 <pre>{{ result.output or 'No output' }}</pre>
