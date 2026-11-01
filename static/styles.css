@@ -198,6 +198,11 @@ pre {
     color: #8a1c1c;
 }
 
+.saved-label {
+    color: #17652d;
+    font-weight: bold;
+}
+
 .metric-list {
     display: grid;
     gap: 10px;

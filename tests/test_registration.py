@@ -1,4 +1,5 @@
 from app import User, create_app, db
+from models import AnalysisResult, CodeSample, Comparison
 
 
 def make_test_app():
@@ -176,3 +177,29 @@ def test_user_can_run_a_code_comparison():
     assert response.data.count(b"Tests passed") == 2
     assert response.data.count(b"Execution time") == 2
     assert response.data.count(b"Complexity") == 2
+
+
+def test_comparison_is_saved_with_two_results():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+
+    client.post(
+        "/compare",
+        data={
+            "problem_name": "Add numbers",
+            "human_code": "print(2 + 2)",
+            "ai_code": "answer = 4\nprint(answer)",
+            "test_input": "",
+            "expected_output": "4",
+        },
+    )
+
+    with app.app_context():
+        comparison = db.session.execute(db.select(Comparison)).scalar_one()
+        samples = db.session.execute(db.select(CodeSample)).scalars().all()
+        results = db.session.execute(db.select(AnalysisResult)).scalars().all()
+
+        assert comparison.problem_name == "Add numbers"
+        assert len(samples) == 2
+        assert len(results) == 2
