@@ -45,7 +45,7 @@ def test_user_can_register():
         assert user.password_hash != "password123"
 
 
-def test_duplicate_user_is_rejected():
+def test_duplicate_username_is_rejected():
     app = make_test_app()
     client = app.test_client()
     form_data = {
@@ -55,9 +55,27 @@ def test_duplicate_user_is_rejected():
     }
 
     client.post("/register", data=form_data)
+    form_data["email"] = "different@example.com"
     response = client.post("/register", data=form_data)
 
-    assert b"already registered" in response.data
+    assert b"username is already registered" in response.data
+
+
+def test_duplicate_email_is_rejected():
+    app = make_test_app()
+    client = app.test_client()
+    register_test_user(client)
+
+    response = client.post(
+        "/register",
+        data={
+            "username": "different-user",
+            "email": "student@example.com",
+            "password": "password123",
+        },
+    )
+
+    assert b"email is already registered" in response.data
 
 
 def test_short_password_is_rejected():

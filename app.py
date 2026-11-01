@@ -84,13 +84,16 @@ def create_app(test_config=None):
             error = validate_registration(username, email, password)
 
             if not error:
-                existing_user = db.session.scalar(
-                    select(User).where(
-                        (User.username == username) | (User.email == email)
-                    )
+                username_owner = db.session.scalar(
+                    select(User).where(User.username == username)
                 )
-                if existing_user:
-                    error = "That username or email is already registered."
+                email_owner = db.session.scalar(
+                    select(User).where(User.email == email)
+                )
+                if username_owner:
+                    error = "That username is already registered."
+                elif email_owner:
+                    error = "That email is already registered."
 
             if error:
                 flash(error, "error")
