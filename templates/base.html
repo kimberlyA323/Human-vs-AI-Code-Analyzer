@@ -11,6 +11,7 @@
         <a class="brand" href="{{ url_for('home') }}">Human vs. AI Code Analyzer</a>
         <nav>
             {% if session.get('user_id') %}
+                <a href="{{ url_for('compare') }}">New Comparison</a>
                 <span>Hello, {{ session.get('username') }}</span>
                 <form class="inline-form" method="post" action="{{ url_for('logout') }}">
                     <button class="link-button" type="submit">Log out</button>

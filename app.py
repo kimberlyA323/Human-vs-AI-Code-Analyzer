@@ -131,6 +131,11 @@ def create_app(test_config=None):
         flash("You have been logged out.", "success")
         return redirect(url_for("login"))
 
+    @app.route("/compare")
+    @login_required
+    def compare():
+        return render_template("compare.html")
+
     return app
 
 

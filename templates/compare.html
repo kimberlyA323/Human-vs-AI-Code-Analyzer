@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}New Comparison{% endblock %}
+{% block content %}
+<section class="form-card wide-card">
+    <h1>New Code Comparison</h1>
+    <p>Enter two Python programs that solve the same problem.</p>
+
+    <form method="post">
+        <label for="problem_name">Problem name</label>
+        <input id="problem_name" name="problem_name" type="text" placeholder="Example: Add two numbers" required>
+
+        <label for="human_code">Human-written Python code</label>
+        <textarea id="human_code" name="human_code" rows="15" spellcheck="false" required>{{ human_code or '' }}</textarea>
+
+        <button type="submit" disabled>Continue</button>
+        <p class="help-text">The AI-code field will be added in the next user story.</p>
+    </form>
+</section>
+{% endblock %}

@@ -86,6 +86,14 @@ def register_test_user(client):
     )
 
 
+def login_test_user(client):
+    register_test_user(client)
+    client.post(
+        "/login",
+        data={"email": "student@example.com", "password": "password123"},
+    )
+
+
 def test_user_can_log_in_and_log_out():
     app = make_test_app()
     client = app.test_client()
@@ -113,3 +121,23 @@ def test_wrong_password_is_rejected():
     )
 
     assert b"Email or password is incorrect" in response.data
+
+
+def test_comparison_page_requires_login():
+    app = make_test_app()
+    client = app.test_client()
+
+    response = client.get("/compare", follow_redirects=True)
+
+    assert b"Please log in to continue" in response.data
+
+
+def test_logged_in_user_sees_human_code_field():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+
+    response = client.get("/compare")
+
+    assert response.status_code == 200
+    assert b"Human-written Python code" in response.data
