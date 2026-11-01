@@ -1,10 +1,19 @@
 import os
+from functools import wraps
 
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 load_dotenv()
@@ -16,6 +25,19 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+
+
+def login_required(view):
+    """Send visitors to the login page when a page requires an account."""
+
+    @wraps(view)
+    def wrapped_view(**kwargs):
+        if "user_id" not in session:
+            flash("Please log in to continue.", "error")
+            return redirect(url_for("login"))
+        return view(**kwargs)
+
+    return wrapped_view
 
 
 def create_app(test_config=None):
@@ -42,7 +64,9 @@ def create_app(test_config=None):
 
     @app.route("/")
     def home():
-        return redirect(url_for("register"))
+        if "user_id" in session:
+            return render_template("home.html")
+        return redirect(url_for("login"))
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
@@ -77,9 +101,35 @@ def create_app(test_config=None):
             db.session.commit()
 
             flash("Account created successfully. You can now log in.", "success")
-            return redirect(url_for("register"))
+            return redirect(url_for("login"))
 
         return render_template("register.html")
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            user = db.session.scalar(select(User).where(User.email == email))
+
+            if user is None or not check_password_hash(user.password_hash, password):
+                flash("Email or password is incorrect.", "error")
+                return render_template("login.html", email=email)
+
+            # Only the database ID is stored in the browser session.
+            session.clear()
+            session["user_id"] = user.id
+            session["username"] = user.username
+            flash("You are now logged in.", "success")
+            return redirect(url_for("home"))
+
+        return render_template("login.html")
+
+    @app.route("/logout", methods=["POST"])
+    def logout():
+        session.clear()
+        flash("You have been logged out.", "success")
+        return redirect(url_for("login"))
 
     return app
 

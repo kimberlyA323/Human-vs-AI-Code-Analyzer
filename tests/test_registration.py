@@ -36,6 +36,7 @@ def test_user_can_register():
     )
 
     assert b"Account created successfully" in response.data
+    assert b"Log In" in response.data
 
     with app.app_context():
         user = db.session.execute(db.select(User)).scalar_one()
@@ -72,3 +73,43 @@ def test_short_password_is_rejected():
     )
 
     assert b"at least 8 characters" in response.data
+
+
+def register_test_user(client):
+    client.post(
+        "/register",
+        data={
+            "username": "student1",
+            "email": "student@example.com",
+            "password": "password123",
+        },
+    )
+
+
+def test_user_can_log_in_and_log_out():
+    app = make_test_app()
+    client = app.test_client()
+    register_test_user(client)
+
+    login_response = client.post(
+        "/login",
+        data={"email": "student@example.com", "password": "password123"},
+        follow_redirects=True,
+    )
+    assert b"Welcome to the Code Analyzer" in login_response.data
+
+    logout_response = client.post("/logout", follow_redirects=True)
+    assert b"You have been logged out" in logout_response.data
+
+
+def test_wrong_password_is_rejected():
+    app = make_test_app()
+    client = app.test_client()
+    register_test_user(client)
+
+    response = client.post(
+        "/login",
+        data={"email": "student@example.com", "password": "wrong-password"},
+    )
+
+    assert b"Email or password is incorrect" in response.data

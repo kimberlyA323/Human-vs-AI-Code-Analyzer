@@ -6,6 +6,38 @@ body {
     background-color: #f2f4f7;
     font-family: Arial, sans-serif;
     margin: 0;
+    padding: 0;
+}
+
+.site-header {
+    align-items: center;
+    background-color: #17345f;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 24px;
+}
+
+.site-header a,
+.site-header .link-button {
+    color: white;
+}
+
+.brand {
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+nav {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+}
+
+.page-container {
+    margin: 0 auto;
+    max-width: 1100px;
     padding: 40px 16px;
 }
 
@@ -65,4 +97,26 @@ button:hover {
 .success {
     background-color: #dff4e5;
     color: #145c29;
+}
+
+.inline-form {
+    display: inline;
+    margin: 0;
+}
+
+.link-button {
+    background: none;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.form-footer {
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.welcome-card {
+    background: white;
+    border-radius: 8px;
+    padding: 32px;
 }
