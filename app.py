@@ -1,6 +1,7 @@
 import os
 from functools import wraps
 
+import click
 from dotenv import load_dotenv
 from flask import (
     abort,
@@ -219,6 +220,24 @@ def create_app(test_config=None):
     @app.errorhandler(413)
     def request_too_large(error):
         return render_template("error.html", error_code=413), 413
+
+    @app.cli.command("reset-password")
+    @click.argument("email")
+    @click.password_option(confirmation_prompt=True)
+    def reset_password(email, password):
+        """Reset one local account password from the command line."""
+
+        user = db.session.scalar(
+            select(User).where(User.email == email.strip().lower())
+        )
+        if user is None:
+            raise click.ClickException("No account was found for that email.")
+        if len(password) < 8:
+            raise click.ClickException("Password must be at least 8 characters.")
+
+        user.password_hash = generate_password_hash(password)
+        db.session.commit()
+        click.echo("Password updated successfully.")
 
     return app
 

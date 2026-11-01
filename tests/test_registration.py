@@ -305,3 +305,27 @@ def test_unknown_page_uses_helpful_error_page():
 
     assert response.status_code == 404
     assert b"Page Not Found" in response.data
+
+
+def test_password_can_be_reset_from_command_line():
+    app = make_test_app()
+    client = app.test_client()
+    register_test_user(client)
+    runner = app.test_cli_runner()
+
+    result = runner.invoke(
+        args=["reset-password", "student@example.com"],
+        input="new-password-123\nnew-password-123\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Password updated successfully" in result.output
+
+    login_response = client.post(
+        "/login",
+        data={
+            "email": "student@example.com",
+            "password": "new-password-123",
+        },
+    )
+    assert login_response.status_code == 302

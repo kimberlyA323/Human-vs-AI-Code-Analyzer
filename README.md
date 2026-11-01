@@ -86,6 +86,15 @@ Whitespace at the beginning and end of the output is ignored.
 pytest
 ```
 
+## Reset a local password
+
+If a local account password is forgotten, activate the virtual environment and
+run the command below. The password prompt does not display the typed password.
+
+```bash
+python -m flask --app app reset-password student@example.com
+```
+
 ## Safety note
 
 This is a local classroom project, not a production code-execution service.
