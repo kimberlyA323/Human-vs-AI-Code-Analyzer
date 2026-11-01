@@ -6,6 +6,7 @@ def test_valid_code_runs():
 
     assert result["success"] is True
     assert result["output"] == "Hello Kim"
+    assert result["execution_time"] > 0
 
 
 def test_syntax_error_is_returned():

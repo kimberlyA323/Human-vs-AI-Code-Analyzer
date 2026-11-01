@@ -2,6 +2,7 @@ import ast
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -29,6 +30,7 @@ def analyze_code(source_code, test_input="", expected_output=""):
         program_path.write_text(source_code, encoding="utf-8")
 
         try:
+            start_time = time.perf_counter()
             completed = subprocess.run(
                 [sys.executable, "-I", str(program_path)],
                 input=test_input,
@@ -38,11 +40,13 @@ def analyze_code(source_code, test_input="", expected_output=""):
                 timeout=RUN_TIMEOUT_SECONDS,
                 check=False,
             )
+            execution_time = time.perf_counter() - start_time
         except subprocess.TimeoutExpired:
             return make_result(
                 False,
                 error="The program exceeded the 3-second limit.",
                 tests_failed=1,
+                execution_time=RUN_TIMEOUT_SECONDS,
             )
 
     if completed.returncode != 0:
@@ -52,6 +56,7 @@ def analyze_code(source_code, test_input="", expected_output=""):
             output=completed.stdout.strip(),
             error=error_text,
             tests_failed=1,
+            execution_time=execution_time,
         )
 
     output = completed.stdout.strip()
@@ -62,10 +67,16 @@ def analyze_code(source_code, test_input="", expected_output=""):
             output=output,
             tests_passed=1 if passed else 0,
             tests_failed=0 if passed else 1,
+            execution_time=execution_time,
         )
 
     # A program that runs without an expected answer counts as one passed run.
-    return make_result(True, output=output, tests_passed=1)
+    return make_result(
+        True,
+        output=output,
+        tests_passed=1,
+        execution_time=execution_time,
+    )
 
 
 def make_result(
@@ -74,6 +85,7 @@ def make_result(
     error="",
     tests_passed=0,
     tests_failed=0,
+    execution_time=0.0,
 ):
     return {
         "success": success,
@@ -81,4 +93,5 @@ def make_result(
         "error": error,
         "tests_passed": tests_passed,
         "tests_failed": tests_failed,
+        "execution_time": execution_time,
     }

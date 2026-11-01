@@ -201,7 +201,7 @@ pre {
 .metric-list {
     display: grid;
     gap: 10px;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
 }
 
 .metric-list div {
