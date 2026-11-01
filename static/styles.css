@@ -198,6 +198,30 @@ pre {
     color: #8a1c1c;
 }
 
+.metric-list {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.metric-list div {
+    background: #eef2f7;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+}
+
+.metric-list dt {
+    color: #59636e;
+    font-size: 13px;
+}
+
+.metric-list dd {
+    font-size: 22px;
+    font-weight: bold;
+    margin: 4px 0 0;
+}
+
 @media (max-width: 700px) {
     .result-grid {
         grid-template-columns: 1fr;
