@@ -3,6 +3,7 @@ from functools import wraps
 
 from dotenv import load_dotenv
 from flask import (
+    abort,
     Flask,
     flash,
     redirect,
@@ -168,6 +169,34 @@ def create_app(test_config=None):
             )
 
         return render_template("compare.html")
+
+    @app.route("/history")
+    @login_required
+    def history():
+        comparisons = db.session.scalars(
+            select(Comparison)
+            .where(Comparison.user_id == session["user_id"])
+            .order_by(Comparison.created_at.desc())
+        ).all()
+        return render_template("history.html", comparisons=comparisons)
+
+    @app.route("/history/<int:comparison_id>")
+    @login_required
+    def history_detail(comparison_id):
+        # Filtering by user ID prevents one user from viewing another user's work.
+        comparison = db.session.scalar(
+            select(Comparison).where(
+                Comparison.id == comparison_id,
+                Comparison.user_id == session["user_id"],
+            )
+        )
+        if comparison is None:
+            abort(404)
+
+        samples = {sample.code_type: sample for sample in comparison.code_samples}
+        return render_template(
+            "history_detail.html", comparison=comparison, samples=samples
+        )
 
     return app
 
