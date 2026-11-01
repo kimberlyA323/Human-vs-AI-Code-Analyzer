@@ -120,3 +120,40 @@ button:hover {
     border-radius: 8px;
     padding: 32px;
 }
+
+.form-card {
+    background: white;
+    border-radius: 8px;
+    padding: 32px;
+}
+
+.wide-card {
+    margin: 0 auto;
+    max-width: 900px;
+}
+
+textarea {
+    border: 1px solid #aeb4bc;
+    border-radius: 4px;
+    font-family: Menlo, Monaco, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    padding: 12px;
+    resize: vertical;
+}
+
+.primary-link {
+    background-color: #2356a8;
+    border-radius: 4px;
+    color: white;
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 16px;
+    text-decoration: none;
+}
+
+.help-text {
+    color: #59636e;
+    font-size: 14px;
+}
