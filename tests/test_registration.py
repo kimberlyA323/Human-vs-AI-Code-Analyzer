@@ -141,3 +141,14 @@ def test_logged_in_user_sees_human_code_field():
 
     assert response.status_code == 200
     assert b"Human-written Python code" in response.data
+
+
+def test_logged_in_user_sees_ai_code_field():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+
+    response = client.get("/compare")
+
+    assert b"AI-generated Python code" in response.data
+    assert b"Compare Code" in response.data
