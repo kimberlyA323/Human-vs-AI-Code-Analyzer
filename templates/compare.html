@@ -12,8 +12,11 @@
         <label for="human_code">Human-written Python code</label>
         <textarea id="human_code" name="human_code" rows="15" spellcheck="false" required>{{ human_code or '' }}</textarea>
 
-        <button type="submit" disabled>Continue</button>
-        <p class="help-text">The AI-code field will be added in the next user story.</p>
+        <label for="ai_code">AI-generated Python code</label>
+        <textarea id="ai_code" name="ai_code" rows="15" spellcheck="false" required>{{ ai_code or '' }}</textarea>
+
+        <button type="submit" disabled>Compare Code</button>
+        <p class="help-text">Code analysis will be enabled in the next user story.</p>
     </form>
 </section>
 {% endblock %}
