@@ -203,3 +203,57 @@ def test_comparison_is_saved_with_two_results():
         assert comparison.problem_name == "Add numbers"
         assert len(samples) == 2
         assert len(results) == 2
+
+
+def test_user_can_view_saved_comparison_history():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+    client.post(
+        "/compare",
+        data={
+            "problem_name": "Saved problem",
+            "human_code": "print('done')",
+            "ai_code": "print('done')",
+            "test_input": "",
+            "expected_output": "done",
+        },
+    )
+
+    history_response = client.get("/history")
+    detail_response = client.get("/history/1")
+
+    assert b"Saved problem" in history_response.data
+    assert b"Human Code" in detail_response.data
+    assert b"AI Code" in detail_response.data
+
+
+def test_user_cannot_view_another_users_comparison():
+    app = make_test_app()
+    first_client = app.test_client()
+    login_test_user(first_client)
+    first_client.post(
+        "/compare",
+        data={
+            "problem_name": "Private problem",
+            "human_code": "print(1)",
+            "ai_code": "print(1)",
+            "expected_output": "1",
+        },
+    )
+
+    second_client = app.test_client()
+    second_client.post(
+        "/register",
+        data={
+            "username": "student2",
+            "email": "student2@example.com",
+            "password": "password123",
+        },
+    )
+    second_client.post(
+        "/login",
+        data={"email": "student2@example.com", "password": "password123"},
+    )
+
+    assert second_client.get("/history/1").status_code == 404

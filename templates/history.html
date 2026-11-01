@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Comparison History{% endblock %}
+{% block content %}
+<section class="form-card wide-card">
+    <div class="page-heading">
+        <div>
+            <h1>Comparison History</h1>
+            <p>Review code comparisons saved to your account.</p>
+        </div>
+        <a class="primary-link" href="{{ url_for('compare') }}">New Comparison</a>
+    </div>
+
+    {% if comparisons %}
+        <div class="history-list">
+            {% for comparison in comparisons %}
+                <a class="history-item" href="{{ url_for('history_detail', comparison_id=comparison.id) }}">
+                    <span>
+                        <strong>{{ comparison.problem_name }}</strong>
+                        <small>Comparison #{{ comparison.id }}</small>
+                    </span>
+                    <time>{{ comparison.created_at.strftime('%b %d, %Y at %I:%M %p') }}</time>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-state">No comparisons have been saved yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

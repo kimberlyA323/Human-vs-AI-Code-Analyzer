@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Saved Comparison{% endblock %}
+{% block content %}
+<section class="form-card wide-card">
+    <div class="page-heading">
+        <div>
+            <h1>{{ comparison.problem_name }}</h1>
+            <p>Saved {{ comparison.created_at.strftime('%b %d, %Y at %I:%M %p') }}</p>
+        </div>
+        <a href="{{ url_for('history') }}">Back to History</a>
+    </div>
+
+    <div class="result-grid">
+        {% for code_type in ['Human', 'AI'] %}
+            {% set sample = samples.get(code_type) %}
+            {% if sample %}
+                <article class="result-card">
+                    <h2>{{ code_type }} Code</h2>
+                    <dl class="metric-list">
+                        <div><dt>Tests passed</dt><dd>{{ sample.analysis_result.tests_passed }}</dd></div>
+                        <div><dt>Tests failed</dt><dd>{{ sample.analysis_result.tests_failed }}</dd></div>
+                        <div><dt>Time</dt><dd>{{ '%.3f'|format(sample.analysis_result.execution_time * 1000) }} ms</dd></div>
+                        <div><dt>Complexity</dt><dd>{{ sample.analysis_result.complexity_score }}</dd></div>
+                    </dl>
+                    <h3>Source code</h3>
+                    <pre>{{ sample.source_code }}</pre>
+                    <h3>Output</h3>
+                    <pre>{{ sample.analysis_result.output or 'No output' }}</pre>
+                    {% if sample.analysis_result.error_message %}
+                        <h3>Error</h3>
+                        <pre class="error-output">{{ sample.analysis_result.error_message }}</pre>
+                    {% endif %}
+                </article>
+            {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
