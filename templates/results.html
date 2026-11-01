@@ -21,6 +21,16 @@
                 <p class="status {{ 'passed' if result.success else 'failed' }}">
                     {{ 'Program ran successfully' if result.success else 'Program error' }}
                 </p>
+                <dl class="metric-list">
+                    <div>
+                        <dt>Tests passed</dt>
+                        <dd>{{ result.tests_passed }}</dd>
+                    </div>
+                    <div>
+                        <dt>Tests failed</dt>
+                        <dd>{{ result.tests_failed }}</dd>
+                    </div>
+                </dl>
                 <h3>Output</h3>
                 <pre>{{ result.output or 'No output' }}</pre>
                 {% if result.error %}

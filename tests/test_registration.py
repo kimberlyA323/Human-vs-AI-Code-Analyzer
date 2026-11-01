@@ -173,3 +173,4 @@ def test_user_can_run_a_code_comparison():
     assert response.status_code == 200
     assert b"Comparison Results" in response.data
     assert response.data.count(b"Hello Kim") >= 2
+    assert response.data.count(b"Tests passed") == 2

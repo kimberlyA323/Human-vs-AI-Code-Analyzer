@@ -154,8 +154,8 @@ def create_app(test_config=None):
                     expected_output=expected_output,
                 )
 
-            human_result = analyze_code(human_code, test_input)
-            ai_result = analyze_code(ai_code, test_input)
+            human_result = analyze_code(human_code, test_input, expected_output)
+            ai_result = analyze_code(ai_code, test_input, expected_output)
             return render_template(
                 "results.html",
                 problem_name=problem_name,
