@@ -5,7 +5,7 @@
     <div class="compare-intro">
         <span class="step-label">New analysis</span>
         <h1>Compare Two Python Solutions</h1>
-        <p>Run the same test against both programs to compare correctness, speed, and complexity.</p>
+        <p>Run up to three tests against both programs to compare correctness, speed, and complexity.</p>
     </div>
 
     <form class="compare-form" method="post">
@@ -33,21 +33,26 @@
         </fieldset>
 
         <fieldset class="form-section">
-            <legend><span>3</span> Define the test</legend>
-            <p class="section-help">The same input is sent to both programs. Their printed output is checked against the expected answer.</p>
-            <div class="test-grid">
-                <div>
-                    <label for="test_input">Test input</label>
-                    <textarea id="test_input" name="test_input" rows="5" placeholder="Example: 7">{{ test_input or '' }}</textarea>
-                    <small>What a user would type when the program calls <code>input()</code>.</small>
-                </div>
+            <legend><span>3</span> Define the test cases</legend>
+            <p class="section-help">Each input is sent to both programs. Case 1 is required; cases 2 and 3 are optional.</p>
+            {% for test_case in test_cases %}
+                <div class="test-case-row">
+                    <h3>Test case {{ loop.index }}{% if loop.index > 1 %} <small>(optional)</small>{% endif %}</h3>
+                    <div class="test-grid">
+                        <div>
+                            <label for="test_input_{{ loop.index }}">Test input</label>
+                            <textarea id="test_input_{{ loop.index }}" name="test_input_{{ loop.index }}" rows="4" placeholder="Example: 7">{{ test_case.input }}</textarea>
+                            <small>What a user types when the program calls <code>input()</code>.</small>
+                        </div>
 
-                <div>
-                    <label for="expected_output">Expected output</label>
-                    <textarea id="expected_output" name="expected_output" rows="5" placeholder="Example: 14">{{ expected_output or '' }}</textarea>
-                    <small>The exact correct answer the programs should print.</small>
+                        <div>
+                            <label for="expected_output_{{ loop.index }}">Expected output</label>
+                            <textarea id="expected_output_{{ loop.index }}" name="expected_output_{{ loop.index }}" rows="4" placeholder="Example: 14"{% if loop.index == 1 %} required{% endif %}>{{ test_case.expected_output }}</textarea>
+                            <small>The exact correct answer the programs should print.</small>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            {% endfor %}
         </fieldset>
 
         <div class="submit-row">

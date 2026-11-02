@@ -314,6 +314,51 @@ textarea {
     margin-top: -8px;
 }
 
+.test-case-row {
+    border-top: 1px solid #e2e6eb;
+    margin-top: 18px;
+    padding-top: 12px;
+}
+
+.test-case-row:first-of-type {
+    border-top: 0;
+}
+
+.test-case-row h3 small {
+    color: #59636e;
+    font-weight: normal;
+}
+
+.case-results {
+    display: grid;
+    gap: 8px;
+}
+
+.case-result {
+    border-left: 4px solid #a22b2b;
+    background: #fff1f1;
+    border-radius: 4px;
+    display: grid;
+    gap: 5px;
+    padding: 10px 12px;
+}
+
+.case-passed {
+    background: #eef8f1;
+    border-left-color: #17652d;
+}
+
+.saved-tests {
+    border: 1px solid #d8dde3;
+    border-radius: 6px;
+    margin-top: 18px;
+    padding: 18px;
+}
+
+.saved-tests h2 {
+    margin-top: 0;
+}
+
 .submit-row {
     align-items: center;
     background: #edf2f8;
@@ -453,5 +498,15 @@ pre {
         align-items: stretch;
         flex-direction: column;
         gap: 16px;
+    }
+
+    .form-card,
+    .dashboard-section,
+    .welcome-card {
+        padding: 20px;
+    }
+
+    .compare-button {
+        width: 100%;
     }
 }
