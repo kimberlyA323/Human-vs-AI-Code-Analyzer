@@ -13,9 +13,7 @@
         <a class="primary-link" href="{{ url_for('compare') }}">New Comparison</a>
     </div>
 
-    {% if expected_output %}
-        <p><strong>Expected output:</strong> <code>{{ expected_output }}</code></p>
-    {% endif %}
+    <p><strong>Test cases run:</strong> {{ test_cases|length }}</p>
 
     <section class="result-summary verdict-{{ summary.verdict_class }}">
         <span class="step-label">Overall verdict</span>
@@ -25,7 +23,7 @@
                 <li>{{ detail }}</li>
             {% endfor %}
         </ul>
-        <p class="help-text">Execution time can change slightly between runs.</p>
+        <p class="help-text">Execution time is the total for all cases. It can change between runs and is not a full performance benchmark.</p>
     </section>
 
     <div class="decision-rule">
@@ -38,10 +36,12 @@
             <article class="result-card">
                 <h2>{{ label }}</h2>
                 <p class="status {{ 'passed' if result.success else 'failed' }}">
-                    {% if result.tests_passed %}
-                        Passed: output matched the expected answer
+                    {% if result.tests_failed == 0 %}
+                        All test cases passed
+                    {% elif result.tests_passed > 0 %}
+                        Some test cases failed
                     {% elif result.success %}
-                        Failed: output did not match the expected answer
+                        No test cases passed
                     {% else %}
                         Failed: program could not run
                     {% endif %}
@@ -64,6 +64,18 @@
                         <dd>{{ result.complexity_score }}</dd>
                     </div>
                 </dl>
+                <h3>Test case details</h3>
+                <div class="case-results">
+                    {% for case in result.test_details %}
+                        <article class="case-result {{ 'case-passed' if case.passed else 'case-failed' }}">
+                            <strong>Case {{ case.number }}: {{ 'Passed' if case.passed else 'Failed' }}</strong>
+                            <span>Input: <code>{{ case.input or 'No input' }}</code></span>
+                            <span>Expected: <code>{{ case.expected_output }}</code></span>
+                            <span>Actual: <code>{{ case.output or 'No output' }}</code></span>
+                            {% if case.error %}<span>Error: {{ case.error }}</span>{% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
                 <h3>Output</h3>
                 <pre>{{ result.output or 'No output' }}</pre>
                 {% if result.error %}

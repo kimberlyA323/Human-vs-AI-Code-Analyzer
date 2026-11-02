@@ -20,6 +20,14 @@
         </ul>
     </section>
 
+    <section class="saved-tests">
+        <h2>Saved test cases</h2>
+        <div class="test-grid">
+            <div><h3>Inputs</h3><pre>{{ comparison.test_input or 'No input' }}</pre></div>
+            <div><h3>Expected outputs</h3><pre>{{ comparison.expected_output }}</pre></div>
+        </div>
+    </section>
+
     <div class="result-grid">
         {% for code_type in ['Human', 'AI'] %}
             {% set sample = samples.get(code_type) %}

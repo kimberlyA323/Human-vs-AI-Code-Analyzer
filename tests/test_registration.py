@@ -198,6 +198,51 @@ def test_user_can_run_a_code_comparison():
     assert b"better" in response.data or b"equally correct" in response.data
 
 
+def test_user_can_run_three_test_cases():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+
+    response = client.post(
+        "/compare",
+        data={
+            "problem_name": "Double numbers",
+            "human_code": "number = int(input())\nprint(number * 2)",
+            "ai_code": "value = int(input())\nprint(2 * value)",
+            "test_input_1": "2",
+            "expected_output_1": "4",
+            "test_input_2": "5",
+            "expected_output_2": "10",
+            "test_input_3": "0",
+            "expected_output_3": "0",
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"Test cases run:</strong> 3" in response.data
+    assert response.data.count(b"Tests passed") == 2
+    assert response.data.count(b"Case 3: Passed") == 2
+
+
+def test_first_test_case_requires_an_expected_output():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+
+    response = client.post(
+        "/compare",
+        data={
+            "problem_name": "Missing answer",
+            "human_code": "print(1)",
+            "ai_code": "print(1)",
+            "test_input_1": "1",
+            "expected_output_1": "",
+        },
+    )
+
+    assert b"first test case needs an expected output" in response.data
+
+
 def test_comparison_is_saved_with_two_results():
     app = make_test_app()
     client = app.test_client()

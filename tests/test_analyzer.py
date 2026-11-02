@@ -1,6 +1,11 @@
 import ast
 
-from analyzer import analyze_code, calculate_complexity, compare_results
+from analyzer import (
+    analyze_code,
+    analyze_test_cases,
+    calculate_complexity,
+    compare_results,
+)
 
 
 def test_valid_code_runs():
@@ -72,3 +77,42 @@ def test_comparison_summary_explains_the_outcome():
 
     assert "Human-written code was better" in summary["verdict"]
     assert any("AI-generated code ran" in line for line in summary["details"])
+
+
+def test_program_runs_against_multiple_test_cases():
+    result = analyze_test_cases(
+        "number = int(input())\nprint(number * 2)",
+        [
+            {"input": "2", "expected_output": "4"},
+            {"input": "5", "expected_output": "10"},
+            {"input": "0", "expected_output": "0"},
+        ],
+    )
+
+    assert result["tests_passed"] == 3
+    assert result["tests_failed"] == 0
+    assert len(result["test_details"]) == 3
+
+
+def test_multiple_test_cases_show_the_failed_case():
+    result = analyze_test_cases(
+        "number = int(input())\nprint(number + 1)",
+        [
+            {"input": "2", "expected_output": "3"},
+            {"input": "5", "expected_output": "10"},
+        ],
+    )
+
+    assert result["tests_passed"] == 1
+    assert result["tests_failed"] == 1
+    assert result["test_details"][1]["passed"] is False
+
+
+def test_runtime_error_is_reported_without_crashing():
+    result = analyze_test_cases(
+        "number = int(input())\nprint(10 / number)",
+        [{"input": "0", "expected_output": "0"}],
+    )
+
+    assert result["tests_failed"] == 1
+    assert "ZeroDivisionError" in result["error"]

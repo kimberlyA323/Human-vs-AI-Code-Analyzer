@@ -16,7 +16,7 @@ from flask import (
 from sqlalchemy import select
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from analyzer import analyze_code, compare_results
+from analyzer import analyze_test_cases, compare_results
 from models import AnalysisResult, CodeSample, Comparison, User, db
 
 
@@ -148,27 +148,30 @@ def create_app(test_config=None):
             problem_name = request.form.get("problem_name", "").strip()
             human_code = request.form.get("human_code", "")
             ai_code = request.form.get("ai_code", "")
-            test_input = request.form.get("test_input", "")
-            expected_output = request.form.get("expected_output", "").strip()
+            test_cases, test_error = read_test_cases(request.form)
 
             if not problem_name or not human_code.strip() or not ai_code.strip():
-                flash("Problem name and both code samples are required.", "error")
+                test_error = "Problem name and both code samples are required."
+
+            if test_error:
+                flash(test_error, "error")
                 return render_template(
                     "compare.html",
                     problem_name=problem_name,
                     human_code=human_code,
                     ai_code=ai_code,
-                    test_input=test_input,
-                    expected_output=expected_output,
+                    test_cases=form_test_cases(request.form),
                 )
 
-            human_result = analyze_code(human_code, test_input, expected_output)
-            ai_result = analyze_code(ai_code, test_input, expected_output)
+            human_result = analyze_test_cases(human_code, test_cases)
+            ai_result = analyze_test_cases(ai_code, test_cases)
             comparison = save_comparison(
                 user_id=session["user_id"],
                 problem_name=problem_name,
-                test_input=test_input,
-                expected_output=expected_output,
+                test_input=format_saved_test_values(test_cases, "input"),
+                expected_output=format_saved_test_values(
+                    test_cases, "expected_output"
+                ),
                 human_code=human_code,
                 ai_code=ai_code,
                 human_result=human_result,
@@ -178,13 +181,13 @@ def create_app(test_config=None):
                 "results.html",
                 comparison_id=comparison.id,
                 problem_name=problem_name,
-                expected_output=expected_output,
+                test_cases=test_cases,
                 human_result=human_result,
                 ai_result=ai_result,
                 summary=compare_results(human_result, ai_result),
             )
 
-        return render_template("compare.html")
+        return render_template("compare.html", test_cases=form_test_cases({}))
 
     @app.route("/history")
     @login_required
@@ -316,6 +319,51 @@ def validate_registration(username, email, password):
     if len(password) < 8:
         return "Password must be at least 8 characters."
     return None
+
+
+def form_test_cases(form):
+    """Return three rows of values so the form can be filled again after an error."""
+
+    return [
+        {
+            "input": form.get(f"test_input_{number}", form.get("test_input", ""))
+            if number == 1
+            else form.get(f"test_input_{number}", ""),
+            "expected_output": form.get(
+                f"expected_output_{number}", form.get("expected_output", "")
+            )
+            if number == 1
+            else form.get(f"expected_output_{number}", ""),
+        }
+        for number in range(1, 4)
+    ]
+
+
+def read_test_cases(form):
+    """Validate the test rows and return only the rows the user completed."""
+
+    rows = form_test_cases(form)
+    if not rows[0]["expected_output"].strip():
+        return [], "The first test case needs an expected output."
+
+    test_cases = []
+    for number, row in enumerate(rows, start=1):
+        has_value = row["input"].strip() or row["expected_output"].strip()
+        if not has_value:
+            continue
+        if not row["expected_output"].strip():
+            return [], f"Test case {number} needs an expected output."
+        test_cases.append(row)
+    return test_cases, None
+
+
+def format_saved_test_values(test_cases, field_name):
+    """Store all case values in the existing comparison text columns."""
+
+    return "\n\n".join(
+        f"Case {number}:\n{case[field_name]}"
+        for number, case in enumerate(test_cases, start=1)
+    )
 
 
 if __name__ == "__main__":

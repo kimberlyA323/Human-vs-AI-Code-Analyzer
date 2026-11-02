@@ -85,6 +85,55 @@ def analyze_code(source_code, test_input="", expected_output=""):
     )
 
 
+def analyze_test_cases(source_code, test_cases):
+    """Run the same program once for every supplied input and expected output."""
+
+    case_results = []
+    analysis_results = []
+    for case_number, test_case in enumerate(test_cases, start=1):
+        result = analyze_code(
+            source_code,
+            test_case["input"],
+            test_case["expected_output"],
+        )
+        analysis_results.append(result)
+        case_results.append(
+            {
+                "number": case_number,
+                "input": test_case["input"],
+                "expected_output": test_case["expected_output"],
+                "output": result["output"],
+                "passed": result["tests_passed"] == 1,
+                "error": result["error"],
+            }
+        )
+
+    tests_passed = sum(case["passed"] for case in case_results)
+    tests_failed = len(case_results) - tests_passed
+    errors = [
+        f"Case {case['number']}: {case['error']}"
+        for case in case_results
+        if case["error"]
+    ]
+    outputs = [
+        f"Case {case['number']}: {case['output'] or 'No output'}"
+        for case in case_results
+    ]
+
+    return {
+        "success": not errors,
+        "output": "\n".join(outputs),
+        "error": "\n".join(errors),
+        "tests_passed": tests_passed,
+        "tests_failed": tests_failed,
+        "execution_time": sum(
+            result["execution_time"] for result in analysis_results
+        ),
+        "complexity_score": analysis_results[0]["complexity_score"],
+        "test_details": case_results,
+    }
+
+
 def calculate_complexity(syntax_tree):
     """Estimate cyclomatic complexity by counting decision points."""
 
