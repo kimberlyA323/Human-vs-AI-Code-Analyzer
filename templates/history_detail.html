@@ -10,6 +10,16 @@
         <a href="{{ url_for('history') }}">Back to History</a>
     </div>
 
+    <section class="result-summary verdict-{{ summary.verdict_class }}">
+        <span class="step-label">Overall verdict</span>
+        <h2>{{ summary.verdict }}</h2>
+        <ul>
+            {% for detail in summary.details %}
+                <li>{{ detail }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
     <div class="result-grid">
         {% for code_type in ['Human', 'AI'] %}
             {% set sample = samples.get(code_type) %}

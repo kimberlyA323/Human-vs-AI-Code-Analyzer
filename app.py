@@ -1,6 +1,7 @@
 import os
 from functools import wraps
 
+import click
 from dotenv import load_dotenv
 from flask import (
     abort,
@@ -15,7 +16,7 @@ from flask import (
 from sqlalchemy import select
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from analyzer import analyze_code
+from analyzer import analyze_code, compare_results
 from models import AnalysisResult, CodeSample, Comparison, User, db
 
 
@@ -48,6 +49,9 @@ def create_app(test_config=None):
         )
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["MAX_CONTENT_LENGTH"] = 100_000
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     if test_config:
         app.config.update(test_config)
@@ -60,7 +64,15 @@ def create_app(test_config=None):
     @app.route("/")
     def home():
         if "user_id" in session:
-            return render_template("home.html")
+            recent_comparisons = db.session.scalars(
+                select(Comparison)
+                .where(Comparison.user_id == session["user_id"])
+                .order_by(Comparison.created_at.desc())
+                .limit(3)
+            ).all()
+            return render_template(
+                "home.html", recent_comparisons=recent_comparisons
+            )
         return redirect(url_for("login"))
 
     @app.route("/register", methods=["GET", "POST"])
@@ -73,13 +85,16 @@ def create_app(test_config=None):
             error = validate_registration(username, email, password)
 
             if not error:
-                existing_user = db.session.scalar(
-                    select(User).where(
-                        (User.username == username) | (User.email == email)
-                    )
+                username_owner = db.session.scalar(
+                    select(User).where(User.username == username)
                 )
-                if existing_user:
-                    error = "That username or email is already registered."
+                email_owner = db.session.scalar(
+                    select(User).where(User.email == email)
+                )
+                if username_owner:
+                    error = "That username is already registered."
+                elif email_owner:
+                    error = "That email is already registered."
 
             if error:
                 flash(error, "error")
@@ -166,6 +181,7 @@ def create_app(test_config=None):
                 expected_output=expected_output,
                 human_result=human_result,
                 ai_result=ai_result,
+                summary=compare_results(human_result, ai_result),
             )
 
         return render_template("compare.html")
@@ -194,9 +210,40 @@ def create_app(test_config=None):
             abort(404)
 
         samples = {sample.code_type: sample for sample in comparison.code_samples}
+        human_result = model_result_to_dictionary(samples["Human"].analysis_result)
+        ai_result = model_result_to_dictionary(samples["AI"].analysis_result)
         return render_template(
-            "history_detail.html", comparison=comparison, samples=samples
+            "history_detail.html",
+            comparison=comparison,
+            samples=samples,
+            summary=compare_results(human_result, ai_result),
         )
+
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template("error.html", error_code=404), 404
+
+    @app.errorhandler(413)
+    def request_too_large(error):
+        return render_template("error.html", error_code=413), 413
+
+    @app.cli.command("reset-password")
+    @click.argument("email")
+    @click.password_option(confirmation_prompt=True)
+    def reset_password(email, password):
+        """Reset one local account password from the command line."""
+
+        user = db.session.scalar(
+            select(User).where(User.email == email.strip().lower())
+        )
+        if user is None:
+            raise click.ClickException("No account was found for that email.")
+        if len(password) < 8:
+            raise click.ClickException("Password must be at least 8 characters.")
+
+        user.password_hash = generate_password_hash(password)
+        db.session.commit()
+        click.echo("Password updated successfully.")
 
     return app
 
@@ -244,13 +291,28 @@ def make_code_sample(code_type, source_code, result):
     return sample
 
 
+def model_result_to_dictionary(result):
+    """Convert a saved database result to the format used by the analyzer."""
+
+    return {
+        "tests_passed": result.tests_passed,
+        "tests_failed": result.tests_failed,
+        "execution_time": result.execution_time,
+        "complexity_score": result.complexity_score,
+    }
+
+
 def validate_registration(username, email, password):
     if not username or not email or not password:
         return "All fields are required."
     if len(username) < 3:
         return "Username must be at least 3 characters."
+    if len(username) > 50:
+        return "Username must be 50 characters or fewer."
     if "@" not in email or "." not in email.split("@")[-1]:
         return "Enter a valid email address."
+    if len(email) > 120:
+        return "Email must be 120 characters or fewer."
     if len(password) < 8:
         return "Password must be at least 8 characters."
     return None

@@ -1,6 +1,6 @@
 import ast
 
-from analyzer import analyze_code, calculate_complexity
+from analyzer import analyze_code, calculate_complexity, compare_results
 
 
 def test_valid_code_runs():
@@ -52,3 +52,23 @@ def test_analysis_includes_complexity():
     result = analyze_code("if True:\n    print('yes')")
 
     assert result["complexity_score"] == 2
+
+
+def test_comparison_summary_explains_the_outcome():
+    human_result = {
+        "tests_passed": 1,
+        "tests_failed": 0,
+        "execution_time": 0.05,
+        "complexity_score": 2,
+    }
+    ai_result = {
+        "tests_passed": 0,
+        "tests_failed": 1,
+        "execution_time": 0.04,
+        "complexity_score": 1,
+    }
+
+    summary = compare_results(human_result, ai_result)
+
+    assert "Human-written code was better" in summary["verdict"]
+    assert any("AI-generated code ran" in line for line in summary["details"])

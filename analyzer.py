@@ -105,6 +105,83 @@ def calculate_complexity(syntax_tree):
     return score
 
 
+def compare_results(human_result, ai_result):
+    """Turn the two sets of measurements into a plain-language summary."""
+
+    human_score = (
+        human_result["tests_passed"],
+        -human_result["tests_failed"],
+    )
+    ai_score = (ai_result["tests_passed"], -ai_result["tests_failed"])
+
+    details = []
+    if human_score > ai_score:
+        verdict = "Human-written code was better for this test"
+        verdict_class = "human"
+        details.append(
+            "Correctness decided the result: human-written code produced the expected output."
+        )
+    elif ai_score > human_score:
+        verdict = "AI-generated code was better for this test"
+        verdict_class = "ai"
+        details.append(
+            "Correctness decided the result: AI-generated code produced the expected output."
+        )
+    elif human_result["tests_passed"] == 0:
+        verdict = "Neither solution was better because both failed"
+        verdict_class = "none"
+        details.append("Neither program produced the expected output.")
+    else:
+        verdict = "Both solutions were equally correct"
+        verdict_class = "tie"
+        details.append("Both programs produced the expected output.")
+
+    human_time = human_result["execution_time"]
+    ai_time = ai_result["execution_time"]
+    difference_ms = abs(human_time - ai_time) * 1000
+    if difference_ms < 1:
+        details.append("Their execution times were nearly the same.")
+    elif human_time < ai_time:
+        details.append(
+            f"Human-written code ran {difference_ms:.3f} ms faster on this run."
+        )
+    else:
+        details.append(
+            f"AI-generated code ran {difference_ms:.3f} ms faster on this run."
+        )
+
+    human_complexity = human_result["complexity_score"]
+    ai_complexity = ai_result["complexity_score"]
+    if human_complexity < ai_complexity:
+        details.append("Human-written code had the lower complexity score.")
+    elif ai_complexity < human_complexity:
+        details.append("AI-generated code had the lower complexity score.")
+    else:
+        details.append("Both programs had the same complexity score.")
+
+    # When correctness is tied, use simplicity first and speed second to give a
+    # useful overall verdict. Correctness always takes priority when it differs.
+    if human_score == ai_score and human_result["tests_passed"] > 0:
+        if human_complexity < ai_complexity:
+            verdict = "Human-written code was better overall"
+            verdict_class = "human"
+        elif ai_complexity < human_complexity:
+            verdict = "AI-generated code was better overall"
+            verdict_class = "ai"
+        elif difference_ms >= 1 and human_time < ai_time:
+            verdict = "Human-written code performed better on this run"
+            verdict_class = "human"
+        elif difference_ms >= 1 and ai_time < human_time:
+            verdict = "AI-generated code performed better on this run"
+            verdict_class = "ai"
+
+    return {
+        "verdict": verdict,
+        "verdict_class": verdict_class,
+        "details": details,
+    }
+
+
 def make_result(
     success,
     output="",

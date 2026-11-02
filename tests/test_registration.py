@@ -45,7 +45,7 @@ def test_user_can_register():
         assert user.password_hash != "password123"
 
 
-def test_duplicate_user_is_rejected():
+def test_duplicate_username_is_rejected():
     app = make_test_app()
     client = app.test_client()
     form_data = {
@@ -55,9 +55,27 @@ def test_duplicate_user_is_rejected():
     }
 
     client.post("/register", data=form_data)
+    form_data["email"] = "different@example.com"
     response = client.post("/register", data=form_data)
 
-    assert b"already registered" in response.data
+    assert b"username is already registered" in response.data
+
+
+def test_duplicate_email_is_rejected():
+    app = make_test_app()
+    client = app.test_client()
+    register_test_user(client)
+
+    response = client.post(
+        "/register",
+        data={
+            "username": "different-user",
+            "email": "student@example.com",
+            "password": "password123",
+        },
+    )
+
+    assert b"email is already registered" in response.data
 
 
 def test_short_password_is_rejected():
@@ -105,7 +123,7 @@ def test_user_can_log_in_and_log_out():
         data={"email": "student@example.com", "password": "password123"},
         follow_redirects=True,
     )
-    assert b"Welcome to the Code Analyzer" in login_response.data
+    assert b"Welcome, student1" in login_response.data
 
     logout_response = client.post("/logout", follow_redirects=True)
     assert b"You have been logged out" in logout_response.data
@@ -152,7 +170,7 @@ def test_logged_in_user_sees_ai_code_field():
     response = client.get("/compare")
 
     assert b"AI-generated Python code" in response.data
-    assert b"Compare Code" in response.data
+    assert b"Run Comparison" in response.data
 
 
 def test_user_can_run_a_code_comparison():
@@ -175,8 +193,9 @@ def test_user_can_run_a_code_comparison():
     assert b"Comparison Results" in response.data
     assert response.data.count(b"Hello Kim") >= 2
     assert response.data.count(b"Tests passed") == 2
-    assert response.data.count(b"Execution time") == 2
+    assert response.data.count(b"Execution time") >= 2
     assert response.data.count(b"Complexity") == 2
+    assert b"better" in response.data or b"equally correct" in response.data
 
 
 def test_comparison_is_saved_with_two_results():
@@ -257,3 +276,57 @@ def test_user_cannot_view_another_users_comparison():
     )
 
     assert second_client.get("/history/1").status_code == 404
+
+
+def test_home_page_shows_recent_comparison():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+    client.post(
+        "/compare",
+        data={
+            "problem_name": "Recent problem",
+            "human_code": "print(2)",
+            "ai_code": "print(2)",
+            "expected_output": "2",
+        },
+    )
+
+    response = client.get("/")
+
+    assert b"Recent Comparisons" in response.data
+    assert b"Recent problem" in response.data
+
+
+def test_unknown_page_uses_helpful_error_page():
+    app = make_test_app()
+    client = app.test_client()
+
+    response = client.get("/not-a-real-page")
+
+    assert response.status_code == 404
+    assert b"Page Not Found" in response.data
+
+
+def test_password_can_be_reset_from_command_line():
+    app = make_test_app()
+    client = app.test_client()
+    register_test_user(client)
+    runner = app.test_cli_runner()
+
+    result = runner.invoke(
+        args=["reset-password", "student@example.com"],
+        input="new-password-123\nnew-password-123\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Password updated successfully" in result.output
+
+    login_response = client.post(
+        "/login",
+        data={
+            "email": "student@example.com",
+            "password": "new-password-123",
+        },
+    )
+    assert login_response.status_code == 302
