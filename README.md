@@ -59,6 +59,9 @@ the two samples before comparing them.
 6. Open `http://127.0.0.1:5000/register`.
 
 The application creates its database tables the first time it starts.
+Generate a persistent secret with `python -c "import secrets; print(secrets.token_hex(32))"`
+and set `SECRET_KEY` in `.env` to keep sessions across restarts. With an empty
+value, the app generates a key for the current process.
 
 ## How to compare programs
 
@@ -71,11 +74,15 @@ print(number * 2)
 ```
 
 For this program, a test input of `4` and expected output of `8` will pass.
-Whitespace at the beginning and end of the output is ignored.
+Line endings are normalized, and whitespace at the beginning and end of the
+output is ignored.
 
 The first test case is required. Two more cases can be added to check edge cases,
 such as zero, negative values, or larger inputs. The results page shows every
 case separately and totals the number passed and failed.
+The verdict goes to the solution that passes more cases. When both pass every
+case, lower complexity breaks the tie. Reported execution times include Python
+startup and are shown for reference.
 
 ## Requirements traceability
 

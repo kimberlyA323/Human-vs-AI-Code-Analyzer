@@ -7,7 +7,7 @@
             <h1>Comparison Results</h1>
             <p>{{ problem_name }}</p>
             {% if comparison_id %}
-                <p class="saved-label">Saved as comparison #{{ comparison_id }}</p>
+                <p class="saved-label"><a href="{{ url_for('history_detail', comparison_id=comparison_id) }}">View saved comparison #{{ comparison_id }}</a></p>
             {% endif %}
         </div>
         <a class="primary-link" href="{{ url_for('compare') }}">New Comparison</a>
@@ -23,19 +23,18 @@
                 <li>{{ detail }}</li>
             {% endfor %}
         </ul>
-        <p class="help-text">Execution time is the total for all cases. It can change between runs and is not a full performance benchmark.</p>
+        <p class="help-text">Measured time includes Python startup and can vary between runs.</p>
     </section>
 
     <div class="decision-rule">
-        <strong>How the verdict is decided:</strong>
-        Correctness comes first, then lower complexity, then execution time.
+        The solution that passes more tests wins. If both pass every test, lower complexity breaks the tie.
     </div>
 
     <div class="result-grid">
         {% for label, result in [('Human-written code', human_result), ('AI-generated code', ai_result)] %}
             <article class="result-card">
                 <h2>{{ label }}</h2>
-                <p class="status {{ 'passed' if result.success else 'failed' }}">
+                <p class="status {{ 'passed' if result.tests_failed == 0 else 'failed' }}">
                     {% if result.tests_failed == 0 %}
                         All test cases passed
                     {% elif result.tests_passed > 0 %}
@@ -61,7 +60,7 @@
                     </div>
                     <div>
                         <dt>Complexity</dt>
-                        <dd>{{ result.complexity_score }}</dd>
+                        <dd>{{ result.complexity_score or 'Unavailable' }}</dd>
                     </div>
                 </dl>
                 <h3>Test case details</h3>

@@ -1,3 +1,5 @@
+import re
+
 from app import User, create_app, db
 from models import AnalysisResult, CodeSample, Comparison
 
@@ -9,6 +11,15 @@ def make_test_app():
             "SECRET_KEY": "test-key",
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         }
+    )
+
+
+def submit_form(client, path, data=None, **kwargs):
+    form = client.get("/" if path == "/logout" else path)
+    token = re.search(rb'name="_csrf_token" value="([a-f0-9]+)"', form.data)
+    assert token is not None
+    return client.post(
+        path, data={"_csrf_token": token[1].decode(), **(data or {})}, **kwargs
     )
 
 
@@ -26,7 +37,8 @@ def test_user_can_register():
     app = make_test_app()
     client = app.test_client()
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/register",
         data={
             "username": "student1",
@@ -54,9 +66,9 @@ def test_duplicate_username_is_rejected():
         "password": "password123",
     }
 
-    client.post("/register", data=form_data)
+    submit_form(client, "/register", data=form_data)
     form_data["email"] = "different@example.com"
-    response = client.post("/register", data=form_data)
+    response = submit_form(client, "/register", data=form_data)
 
     assert b"username is already registered" in response.data
 
@@ -66,7 +78,8 @@ def test_duplicate_email_is_rejected():
     client = app.test_client()
     register_test_user(client)
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/register",
         data={
             "username": "different-user",
@@ -82,7 +95,8 @@ def test_short_password_is_rejected():
     app = make_test_app()
     client = app.test_client()
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/register",
         data={
             "username": "student1",
@@ -95,7 +109,8 @@ def test_short_password_is_rejected():
 
 
 def register_test_user(client):
-    client.post(
+    submit_form(
+        client,
         "/register",
         data={
             "username": "student1",
@@ -107,7 +122,8 @@ def register_test_user(client):
 
 def login_test_user(client):
     register_test_user(client)
-    client.post(
+    submit_form(
+        client,
         "/login",
         data={"email": "student@example.com", "password": "password123"},
     )
@@ -118,14 +134,15 @@ def test_user_can_log_in_and_log_out():
     client = app.test_client()
     register_test_user(client)
 
-    login_response = client.post(
+    login_response = submit_form(
+        client,
         "/login",
         data={"email": "student@example.com", "password": "password123"},
         follow_redirects=True,
     )
     assert b"Welcome, student1" in login_response.data
 
-    logout_response = client.post("/logout", follow_redirects=True)
+    logout_response = submit_form(client, "/logout", follow_redirects=True)
     assert b"You have been logged out" in logout_response.data
 
 
@@ -134,7 +151,8 @@ def test_wrong_password_is_rejected():
     client = app.test_client()
     register_test_user(client)
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/login",
         data={"email": "student@example.com", "password": "wrong-password"},
     )
@@ -178,7 +196,8 @@ def test_user_can_run_a_code_comparison():
     client = app.test_client()
     login_test_user(client)
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/compare",
         data={
             "problem_name": "Greeting",
@@ -203,7 +222,8 @@ def test_user_can_run_three_test_cases():
     client = app.test_client()
     login_test_user(client)
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/compare",
         data={
             "problem_name": "Double numbers",
@@ -229,7 +249,8 @@ def test_first_test_case_requires_an_expected_output():
     client = app.test_client()
     login_test_user(client)
 
-    response = client.post(
+    response = submit_form(
+        client,
         "/compare",
         data={
             "problem_name": "Missing answer",
@@ -243,12 +264,66 @@ def test_first_test_case_requires_an_expected_output():
     assert b"first test case needs an expected output" in response.data
 
 
+def test_comparison_preserves_case_numbers_and_marks_wrong_answers_failed():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+    response = submit_form(
+        client,
+        "/compare",
+        data={
+            "problem_name": "Check result styling",
+            "human_code": "print(1)",
+            "ai_code": "print(2)",
+            "expected_output_1": "1",
+            "expected_output_3": "2",
+        },
+    )
+
+    assert b"Case 3: Passed" in response.data
+    assert b"Case 3: Failed" in response.data
+    assert response.data.count(b'class="status failed"') == 2
+    assert b"Case 3:" in client.get("/history/1").data
+
+
+def test_overlong_problem_name_is_rejected_before_saving():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+    response = submit_form(
+        client,
+        "/compare",
+        data={
+            "problem_name": "x" * 121,
+            "human_code": "print(1)",
+            "ai_code": "print(1)",
+            "expected_output_1": "1",
+        },
+    )
+
+    assert b"Problem name must be 120 characters or fewer" in response.data
+    with app.app_context():
+        assert db.session.execute(db.select(Comparison)).scalar_one_or_none() is None
+
+
+def test_post_without_valid_form_token_is_rejected():
+    app = make_test_app()
+    client = app.test_client()
+    login_test_user(client)
+    client.get("/compare")
+
+    assert client.post("/logout").status_code == 400
+    assert client.post("/compare", data={"_csrf_token": "wrong"}).status_code == 400
+    assert client.get("/compare").status_code == 200
+
+
 def test_comparison_is_saved_with_two_results():
     app = make_test_app()
     client = app.test_client()
     login_test_user(client)
 
-    client.post(
+    submit_form(
+        client,
         "/compare",
         data={
             "problem_name": "Add numbers",
@@ -273,7 +348,8 @@ def test_user_can_view_saved_comparison_history():
     app = make_test_app()
     client = app.test_client()
     login_test_user(client)
-    client.post(
+    submit_form(
+        client,
         "/compare",
         data={
             "problem_name": "Saved problem",
@@ -296,7 +372,8 @@ def test_user_cannot_view_another_users_comparison():
     app = make_test_app()
     first_client = app.test_client()
     login_test_user(first_client)
-    first_client.post(
+    submit_form(
+        first_client,
         "/compare",
         data={
             "problem_name": "Private problem",
@@ -307,7 +384,8 @@ def test_user_cannot_view_another_users_comparison():
     )
 
     second_client = app.test_client()
-    second_client.post(
+    submit_form(
+        second_client,
         "/register",
         data={
             "username": "student2",
@@ -315,7 +393,8 @@ def test_user_cannot_view_another_users_comparison():
             "password": "password123",
         },
     )
-    second_client.post(
+    submit_form(
+        second_client,
         "/login",
         data={"email": "student2@example.com", "password": "password123"},
     )
@@ -327,7 +406,8 @@ def test_home_page_shows_recent_comparison():
     app = make_test_app()
     client = app.test_client()
     login_test_user(client)
-    client.post(
+    submit_form(
+        client,
         "/compare",
         data={
             "problem_name": "Recent problem",
@@ -367,7 +447,8 @@ def test_password_can_be_reset_from_command_line():
     assert result.exit_code == 0
     assert "Password updated successfully" in result.output
 
-    login_response = client.post(
+    login_response = submit_form(
+        client,
         "/login",
         data={
             "email": "student@example.com",

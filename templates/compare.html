@@ -9,32 +9,33 @@
     </div>
 
     <form class="compare-form" method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <fieldset class="form-section">
             <legend><span>1</span> Describe the problem</legend>
             <p class="section-help">Give the comparison a short name so you can find it in your history.</p>
             <label for="problem_name">Problem name</label>
-            <input id="problem_name" name="problem_name" type="text" value="{{ problem_name or '' }}" placeholder="Example: Classify a number" required>
+            <input id="problem_name" name="problem_name" type="text" value="{{ problem_name or '' }}" maxlength="{{ max_problem_name_length }}" placeholder="Example: Classify a number" required>
         </fieldset>
 
         <fieldset class="form-section">
             <legend><span>2</span> Enter both solutions</legend>
-            <p class="section-help">Both programs should use <code>input()</code> and <code>print()</code>.</p>
+            <p class="section-help">Use <code>input()</code> if the program reads input, and <code>print()</code> to show the answer.</p>
             <div class="code-entry-grid">
                 <div class="code-entry human-entry">
                     <label for="human_code"><span class="sample-badge human-badge">Human</span> Human-written Python code</label>
-                    <textarea id="human_code" name="human_code" rows="16" spellcheck="false" placeholder="number = int(input())&#10;print(number * 2)" required>{{ human_code or '' }}</textarea>
+                    <textarea id="human_code" name="human_code" rows="16" maxlength="{{ max_code_length }}" spellcheck="false" placeholder="number = int(input())&#10;print(number * 2)" required>{{ human_code or '' }}</textarea>
                 </div>
 
                 <div class="code-entry ai-entry">
                     <label for="ai_code"><span class="sample-badge ai-badge">AI</span> AI-generated Python code</label>
-                    <textarea id="ai_code" name="ai_code" rows="16" spellcheck="false" placeholder="value = int(input())&#10;answer = value * 2&#10;print(answer)" required>{{ ai_code or '' }}</textarea>
+                    <textarea id="ai_code" name="ai_code" rows="16" maxlength="{{ max_code_length }}" spellcheck="false" placeholder="value = int(input())&#10;answer = value * 2&#10;print(answer)" required>{{ ai_code or '' }}</textarea>
                 </div>
             </div>
         </fieldset>
 
         <fieldset class="form-section">
             <legend><span>3</span> Define the test cases</legend>
-            <p class="section-help">Each input is sent to both programs. Case 1 is required; cases 2 and 3 are optional.</p>
+            <p class="section-help">Both programs receive the same input. Case 1 is required. Leave unused cases blank.</p>
             {% for test_case in test_cases %}
                 <div class="test-case-row">
                     <h3>Test case {{ loop.index }}{% if loop.index > 1 %} <small>(optional)</small>{% endif %}</h3>
@@ -48,7 +49,7 @@
                         <div>
                             <label for="expected_output_{{ loop.index }}">Expected output</label>
                             <textarea id="expected_output_{{ loop.index }}" name="expected_output_{{ loop.index }}" rows="4" placeholder="Example: 14"{% if loop.index == 1 %} required{% endif %}>{{ test_case.expected_output }}</textarea>
-                            <small>The exact correct answer the programs should print.</small>
+                            <small>The answer the programs should print. Surrounding whitespace is ignored.</small>
                         </div>
                     </div>
                 </div>

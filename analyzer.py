@@ -34,11 +34,10 @@ def analyze_code(source_code, test_input="", expected_output=""):
         try:
             start_time = time.perf_counter()
             completed = subprocess.run(
-                [sys.executable, "-I", str(program_path)],
-                input=test_input,
+                [sys.executable, "-I", "-X", "utf8", str(program_path)],
+                input=test_input.encode("utf-8"),
                 capture_output=True,
                 cwd=temporary_directory,
-                text=True,
                 timeout=RUN_TIMEOUT_SECONDS,
                 check=False,
             )
@@ -52,20 +51,35 @@ def analyze_code(source_code, test_input="", expected_output=""):
                 complexity_score=complexity_score,
             )
 
+    try:
+        output = completed.stdout.decode("utf-8")
+        invalid_output = False
+    except UnicodeDecodeError:
+        output = completed.stdout.decode("utf-8", errors="backslashreplace")
+        invalid_output = True
+
+    output = normalize_output(output)
+    error_text = ""
     if completed.returncode != 0:
-        error_text = completed.stderr.strip() or "The program could not run."
+        error_text = (
+            completed.stderr.decode("utf-8", errors="backslashreplace").strip()
+            or "The program could not run."
+        )
+    elif invalid_output:
+        error_text = "The program produced output that is not valid UTF-8 text."
+
+    if error_text:
         return make_result(
             False,
-            output=completed.stdout.strip(),
+            output=output,
             error=error_text,
             tests_failed=1,
             execution_time=execution_time,
             complexity_score=complexity_score,
         )
 
-    output = completed.stdout.strip()
     if expected_output:
-        passed = output == expected_output.strip()
+        passed = output == normalize_output(expected_output)
         return make_result(
             True,
             output=output,
@@ -99,7 +113,7 @@ def analyze_test_cases(source_code, test_cases):
         analysis_results.append(result)
         case_results.append(
             {
-                "number": case_number,
+                "number": test_case.get("number", case_number),
                 "input": test_case["input"],
                 "expected_output": test_case["expected_output"],
                 "output": result["output"],
@@ -107,6 +121,12 @@ def analyze_test_cases(source_code, test_cases):
                 "error": result["error"],
             }
         )
+
+    if not case_results:
+        return {
+            **make_result(False, error="No test cases were provided."),
+            "test_details": [],
+        }
 
     tests_passed = sum(case["passed"] for case in case_results)
     tests_failed = len(case_results) - tests_passed
@@ -154,74 +174,73 @@ def calculate_complexity(syntax_tree):
     return score
 
 
+def normalize_output(output):
+    return output.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
 def compare_results(human_result, ai_result):
     """Turn the two sets of measurements into a plain-language summary."""
 
-    human_score = (
-        human_result["tests_passed"],
-        -human_result["tests_failed"],
-    )
-    ai_score = (ai_result["tests_passed"], -ai_result["tests_failed"])
+    human_passed = human_result["tests_passed"]
+    ai_passed = ai_result["tests_passed"]
 
-    details = []
-    if human_score > ai_score:
-        verdict = "Human-written code was better for this test"
+    details = [
+        f"Human-written code passed {human_passed} of "
+        f"{human_passed + human_result['tests_failed']} cases.",
+        f"AI-generated code passed {ai_passed} of "
+        f"{ai_passed + ai_result['tests_failed']} cases.",
+    ]
+    if human_passed > ai_passed:
+        verdict = "Human-written code was better on these tests"
         verdict_class = "human"
-        details.append(
-            "Correctness decided the result: human-written code produced the expected output."
-        )
-    elif ai_score > human_score:
-        verdict = "AI-generated code was better for this test"
+    elif ai_passed > human_passed:
+        verdict = "AI-generated code was better on these tests"
         verdict_class = "ai"
-        details.append(
-            "Correctness decided the result: AI-generated code produced the expected output."
-        )
-    elif human_result["tests_passed"] == 0:
-        verdict = "Neither solution was better because both failed"
+    elif human_passed == 0:
+        verdict = "Neither solution passed a test case"
         verdict_class = "none"
-        details.append("Neither program produced the expected output.")
+    elif human_result["tests_failed"] or ai_result["tests_failed"]:
+        verdict = "Both solutions passed the same number of cases"
+        verdict_class = "tie"
     else:
         verdict = "Both solutions were equally correct"
         verdict_class = "tie"
-        details.append("Both programs produced the expected output.")
 
     human_time = human_result["execution_time"]
     ai_time = ai_result["execution_time"]
-    difference_ms = abs(human_time - ai_time) * 1000
-    if difference_ms < 1:
-        details.append("Their execution times were nearly the same.")
-    elif human_time < ai_time:
-        details.append(
-            f"Human-written code ran {difference_ms:.3f} ms faster on this run."
-        )
-    else:
-        details.append(
-            f"AI-generated code ran {difference_ms:.3f} ms faster on this run."
-        )
+    if all(result.get("success", True) for result in (human_result, ai_result)):
+        difference_ms = abs(human_time - ai_time) * 1000
+        if difference_ms < 1:
+            details.append("Their measured times differed by less than 1 ms.")
+        elif human_time < ai_time:
+            details.append(
+                f"Human-written code ran {difference_ms:.3f} ms faster on this run."
+            )
+        else:
+            details.append(
+                f"AI-generated code ran {difference_ms:.3f} ms faster on this run."
+            )
 
     human_complexity = human_result["complexity_score"]
     ai_complexity = ai_result["complexity_score"]
-    if human_complexity < ai_complexity:
-        details.append("Human-written code had the lower complexity score.")
-    elif ai_complexity < human_complexity:
-        details.append("AI-generated code had the lower complexity score.")
-    else:
-        details.append("Both programs had the same complexity score.")
-
-    # When correctness is tied, use simplicity first and speed second to give a
-    # useful overall verdict. Correctness always takes priority when it differs.
-    if human_score == ai_score and human_result["tests_passed"] > 0:
+    if human_complexity and ai_complexity:
         if human_complexity < ai_complexity:
-            verdict = "Human-written code was better overall"
-            verdict_class = "human"
+            details.append("Human-written code had the lower complexity score.")
         elif ai_complexity < human_complexity:
-            verdict = "AI-generated code was better overall"
-            verdict_class = "ai"
-        elif difference_ms >= 1 and human_time < ai_time:
-            verdict = "Human-written code performed better on this run"
+            details.append("AI-generated code had the lower complexity score.")
+        else:
+            details.append("Both programs had the same complexity score.")
+
+        both_passed_all = (
+            human_passed == ai_passed
+            and human_passed > 0
+            and not (human_result["tests_failed"] or ai_result["tests_failed"])
+        )
+        if both_passed_all and human_complexity < ai_complexity:
+            verdict = "Human-written code passed all tests with lower complexity"
             verdict_class = "human"
-        elif difference_ms >= 1 and ai_time < human_time:
-            verdict = "AI-generated code performed better on this run"
+        elif both_passed_all and ai_complexity < human_complexity:
+            verdict = "AI-generated code passed all tests with lower complexity"
             verdict_class = "ai"
 
     return {
@@ -242,8 +261,8 @@ def make_result(
 ):
     return {
         "success": success,
-        "output": output,
-        "error": error,
+        "output": output.replace("\x00", r"\x00"),
+        "error": error.replace("\x00", r"\x00"),
         "tests_passed": tests_passed,
         "tests_failed": tests_failed,
         "execution_time": execution_time,

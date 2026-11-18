@@ -341,6 +341,11 @@ textarea {
     display: grid;
     gap: 5px;
     padding: 10px 12px;
+    overflow-wrap: anywhere;
+}
+
+.case-result code {
+    white-space: pre-wrap;
 }
 
 .case-passed {
