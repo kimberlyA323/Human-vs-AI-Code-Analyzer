@@ -116,3 +116,49 @@ def test_runtime_error_is_reported_without_crashing():
 
     assert result["tests_failed"] == 1
     assert "ZeroDivisionError" in result["error"]
+
+
+def test_multiline_output_matches_browser_line_endings():
+    result = analyze_code("print('café\\nsecond line')", expected_output="café\r\nsecond line")
+
+    assert result["tests_passed"] == 1
+
+
+def test_invalid_utf8_fails_the_case():
+    result = analyze_code(
+        "import sys\nsys.stdout.buffer.write(b'\\xff')",
+        expected_output=r"\xff",
+    )
+
+    assert result["tests_failed"] == 1
+    assert "UTF-8" in result["error"]
+
+
+def test_equal_partial_results_stay_tied():
+    human_result = {
+        "tests_passed": 1,
+        "tests_failed": 2,
+        "execution_time": 0.01,
+        "complexity_score": 1,
+    }
+    ai_result = {**human_result, "complexity_score": 3}
+
+    summary = compare_results(human_result, ai_result)
+
+    assert summary["verdict_class"] == "tie"
+    assert "passed 1 of 3 cases" in summary["details"][0]
+
+
+def test_single_run_timing_does_not_break_a_correctness_and_complexity_tie():
+    human_result = {
+        "tests_passed": 2,
+        "tests_failed": 0,
+        "execution_time": 0.01,
+        "complexity_score": 1,
+    }
+    ai_result = {**human_result, "execution_time": 0.04}
+
+    summary = compare_results(human_result, ai_result)
+
+    assert summary["verdict_class"] == "tie"
+    assert any("Human-written code ran" in detail for detail in summary["details"])

@@ -1,5 +1,6 @@
 import os
 from functools import wraps
+from secrets import compare_digest, token_hex
 
 import click
 from dotenv import load_dotenv
@@ -14,13 +15,15 @@ from flask import (
     url_for,
 )
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from analyzer import analyze_test_cases, compare_results
+from analyzer import MAX_CODE_LENGTH, analyze_test_cases, compare_results
 from models import AnalysisResult, CodeSample, Comparison, User, db
 
 
 load_dotenv()
+MAX_PROBLEM_NAME_LENGTH = Comparison.problem_name.type.length
 
 
 def login_required(view):
@@ -38,7 +41,10 @@ def login_required(view):
 
 def create_app(test_config=None):
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "development-key")
+    secret_key = os.getenv("SECRET_KEY")
+    if secret_key in (None, "", "development-key", "change-this-for-your-computer"):
+        secret_key = token_hex(32)
+    app.config["SECRET_KEY"] = secret_key
     database_url = os.getenv(
         "DATABASE_URL",
         "postgresql+psycopg://postgres:password@localhost:5432/code_analyzer",
@@ -60,6 +66,23 @@ def create_app(test_config=None):
 
     with app.app_context():
         db.create_all()
+
+    @app.template_global()
+    def csrf_token():
+        if "_csrf_token" not in session:
+            session["_csrf_token"] = token_hex(32)
+        return session["_csrf_token"]
+
+    @app.before_request
+    def validate_form_token():
+        if request.method != "POST" or request.endpoint is None:
+            return
+        expected_token = session.get("_csrf_token")
+        submitted_token = request.form.get("_csrf_token", "")
+        if not expected_token or not compare_digest(
+            expected_token.encode("utf-8"), submitted_token.encode("utf-8")
+        ):
+            abort(400)
 
     @app.route("/")
     def home():
@@ -108,7 +131,14 @@ def create_app(test_config=None):
                 password_hash=generate_password_hash(password),
             )
             db.session.add(user)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash("That username or email is already registered.", "error")
+                return render_template(
+                    "register.html", username=username, email=email
+                )
 
             flash("Account created successfully. You can now log in.", "success")
             return redirect(url_for("login"))
@@ -120,13 +150,14 @@ def create_app(test_config=None):
         if request.method == "POST":
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
-            user = db.session.scalar(select(User).where(User.email == email))
+            user = None
+            if email and "\x00" not in email and password:
+                user = db.session.scalar(select(User).where(User.email == email))
 
             if user is None or not check_password_hash(user.password_hash, password):
                 flash("Email or password is incorrect.", "error")
                 return render_template("login.html", email=email)
 
-            # Only the database ID is stored in the browser session.
             session.clear()
             session["user_id"] = user.id
             session["username"] = user.username
@@ -148,19 +179,21 @@ def create_app(test_config=None):
             problem_name = request.form.get("problem_name", "").strip()
             human_code = request.form.get("human_code", "")
             ai_code = request.form.get("ai_code", "")
-            test_cases, test_error = read_test_cases(request.form)
+            rows = form_test_cases(request.form)
+            test_cases, test_error = read_test_cases(rows)
+            form_error = validate_comparison(problem_name, human_code, ai_code)
+            error = form_error or test_error
 
-            if not problem_name or not human_code.strip() or not ai_code.strip():
-                test_error = "Problem name and both code samples are required."
-
-            if test_error:
-                flash(test_error, "error")
+            if error:
+                flash(error, "error")
                 return render_template(
                     "compare.html",
                     problem_name=problem_name,
                     human_code=human_code,
                     ai_code=ai_code,
-                    test_cases=form_test_cases(request.form),
+                    test_cases=rows,
+                    max_problem_name_length=MAX_PROBLEM_NAME_LENGTH,
+                    max_code_length=MAX_CODE_LENGTH,
                 )
 
             human_result = analyze_test_cases(human_code, test_cases)
@@ -187,7 +220,12 @@ def create_app(test_config=None):
                 summary=compare_results(human_result, ai_result),
             )
 
-        return render_template("compare.html", test_cases=form_test_cases({}))
+        return render_template(
+            "compare.html",
+            test_cases=form_test_cases({}),
+            max_problem_name_length=MAX_PROBLEM_NAME_LENGTH,
+            max_code_length=MAX_CODE_LENGTH,
+        )
 
     @app.route("/history")
     @login_required
@@ -221,6 +259,10 @@ def create_app(test_config=None):
             samples=samples,
             summary=compare_results(human_result, ai_result),
         )
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template("error.html", error_code=400), 400
 
     @app.errorhandler(404)
     def page_not_found(error):
@@ -287,7 +329,7 @@ def make_code_sample(code_type, source_code, result):
         tests_failed=result["tests_failed"],
         execution_time=result["execution_time"],
         complexity_score=result["complexity_score"],
-        error_count=1 if result["error"] else 0,
+        error_count=sum(bool(case["error"]) for case in result["test_details"]),
         output=result["output"],
         error_message=result["error"],
     )
@@ -302,12 +344,15 @@ def model_result_to_dictionary(result):
         "tests_failed": result.tests_failed,
         "execution_time": result.execution_time,
         "complexity_score": result.complexity_score,
+        "success": result.error_count == 0,
     }
 
 
 def validate_registration(username, email, password):
     if not username or not email or not password:
         return "All fields are required."
+    if "\x00" in username or "\x00" in email:
+        return "Enter a valid username and email address."
     if len(username) < 3:
         return "Username must be at least 3 characters."
     if len(username) > 50:
@@ -321,11 +366,24 @@ def validate_registration(username, email, password):
     return None
 
 
+def validate_comparison(problem_name, human_code, ai_code):
+    if not problem_name or not human_code.strip() or not ai_code.strip():
+        return "Problem name and both code samples are required."
+    if len(problem_name) > MAX_PROBLEM_NAME_LENGTH:
+        return f"Problem name must be {MAX_PROBLEM_NAME_LENGTH} characters or fewer."
+    if max(len(human_code), len(ai_code)) > MAX_CODE_LENGTH:
+        return f"Each code sample must be {MAX_CODE_LENGTH:,} characters or fewer."
+    if any("\x00" in value for value in (problem_name, human_code, ai_code)):
+        return "Problem name and code samples must not contain null characters."
+    return None
+
+
 def form_test_cases(form):
     """Return three rows of values so the form can be filled again after an error."""
 
     return [
         {
+            "number": number,
             "input": form.get(f"test_input_{number}", form.get("test_input", ""))
             if number == 1
             else form.get(f"test_input_{number}", ""),
@@ -339,20 +397,22 @@ def form_test_cases(form):
     ]
 
 
-def read_test_cases(form):
+def read_test_cases(rows):
     """Validate the test rows and return only the rows the user completed."""
 
-    rows = form_test_cases(form)
     if not rows[0]["expected_output"].strip():
         return [], "The first test case needs an expected output."
 
     test_cases = []
-    for number, row in enumerate(rows, start=1):
-        has_value = row["input"].strip() or row["expected_output"].strip()
+    for row in rows:
+        number = row["number"]
+        has_value = row["input"] or row["expected_output"].strip()
         if not has_value:
             continue
         if not row["expected_output"].strip():
             return [], f"Test case {number} needs an expected output."
+        if "\x00" in row["input"] or "\x00" in row["expected_output"]:
+            return [], f"Test case {number} must not contain null characters."
         test_cases.append(row)
     return test_cases, None
 
@@ -361,8 +421,7 @@ def format_saved_test_values(test_cases, field_name):
     """Store all case values in the existing comparison text columns."""
 
     return "\n\n".join(
-        f"Case {number}:\n{case[field_name]}"
-        for number, case in enumerate(test_cases, start=1)
+        f"Case {case['number']}:\n{case[field_name]}" for case in test_cases
     )
 
 

@@ -38,7 +38,7 @@
                         <div><dt>Tests passed</dt><dd>{{ sample.analysis_result.tests_passed }}</dd></div>
                         <div><dt>Tests failed</dt><dd>{{ sample.analysis_result.tests_failed }}</dd></div>
                         <div><dt>Time</dt><dd>{{ '%.3f'|format(sample.analysis_result.execution_time * 1000) }} ms</dd></div>
-                        <div><dt>Complexity</dt><dd>{{ sample.analysis_result.complexity_score }}</dd></div>
+                        <div><dt>Complexity</dt><dd>{{ sample.analysis_result.complexity_score or 'Unavailable' }}</dd></div>
                     </dl>
                     <h3>Source code</h3>
                     <pre>{{ sample.source_code }}</pre>
